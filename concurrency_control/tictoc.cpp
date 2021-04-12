@@ -57,6 +57,17 @@ RC Tictoc::get_rw_set(TxnManager * txn, tictoc_set_ent * &rset, tictoc_set_ent *
 	return RCOK;
 }
 
+RC Tictoc::free_rw_set(TxnManager * txn, tictoc_set_ent * &rset, tictoc_set_ent *& wset) {
+	wset->set_size = txn->get_write_set_size();
+	rset->set_size = txn->get_read_set_size();
+  mem_allocator.free(wset->rows, sizeof(row_t *) * wset->set_size);
+  mem_allocator.free(rset->rows, sizeof(row_t *) * rset->set_size);
+  mem_allocator.free(wset->access, sizeof(Access *) * wset->set_size);
+  mem_allocator.free(rset->access, sizeof(Access *) * rset->set_size);
+  mem_allocator.free(wset, sizeof(tictoc_set_ent));
+  mem_allocator.free(rset, sizeof(tictoc_set_ent));
+	return RCOK;
+}
 void Tictoc::init() {
     return ;
 }
@@ -126,6 +137,7 @@ RC Tictoc::validate_coor(TxnManager * txn)
     if (rc == Abort) {
         unlock_write_set(rc, wset, txn);
     }
+    free_rw_set(txn, rset, wset);
 #endif
     return rc;
 }
@@ -173,6 +185,7 @@ RC Tictoc::validate_part(TxnManager * txn)
         // } else
         //     return rc;
     }
+    free_rw_set(txn, rset, wset);
 #endif
     return rc;
 }
@@ -301,6 +314,7 @@ Tictoc::cleanup(RC rc, TxnManager * txn)
 	tictoc_set_ent * rset;
   get_rw_set(txn, rset, wset);
   unlock_write_set(rc, wset, txn);
+  free_rw_set(txn, rset, wset);
 #endif
 }
 

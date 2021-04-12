@@ -96,6 +96,7 @@ class KeyXidCache;
 class RtsCache;
 // class QTcpQueue;
 class TcpTimestamp;
+class HLCTime;
 
 typedef uint32_t UInt32;
 typedef int32_t SInt32;
@@ -148,6 +149,7 @@ extern KeyXidCache wkdb_key_xid_cache;
 extern RtsCache wkdb_rts_cache;
 // extern QTcpQueue tcp_queue;
 extern TcpTimestamp tcp_ts;
+extern HLCTime hlc_ts;
 
 extern map<string, string> g_params;
 

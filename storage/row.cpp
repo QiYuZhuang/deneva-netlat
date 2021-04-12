@@ -98,7 +98,7 @@ void row_t::init_manager(row_t * row) {
     manager = (Row_silo *) mem_allocator.align_alloc(sizeof(Row_silo));
 #endif
 
-#if CC_ALG != HSTORE && CC_ALG != HSTORE_SPEC
+#if CC_ALG != HSTORE && CC_ALG != HSTORE_SPEC && CC_ALG != TICTOC
 	manager->init(this);
 #endif
 }
@@ -678,11 +678,11 @@ uint64_t row_t::return_row(RC rc, access_t type, TxnManager *txn, row_t *row) {
 		manager->commit(type,txn,row);
 	}
 
-	if (type == XP) {
-		row->free_row();
-			DEBUG_M("row_t::return_row XP free \n");
-		mem_allocator.free(row, sizeof(row_t));
-	}
+
+	row->free_row();
+	DEBUG_M("row_t::return_row XP free \n");
+	mem_allocator.free(row, sizeof(row_t));
+
 	return 0;
 #elif CC_ALG == WOOKONG
 	assert (row != NULL);

@@ -160,7 +160,7 @@ FINISH:
   INC_STATS(txn->get_thd_id(),wkdb_validate_time,timespan);
   txn->txn_stats.cc_time += timespan;
   txn->txn_stats.cc_time_short += timespan;
-
+  free_rw_set(txn, rset, wset);
   DEBUG("WKDB Validate End %ld: %d [%lu,%lu]\n",txn->get_txn_id(),rc==RCOK,lower,upper);
   sem_post(&_semaphore);
   return rc;
@@ -184,7 +184,7 @@ RC Wkdb::get_rw_set(TxnManager * txn, wkdb_set_ent * &rset, wkdb_set_ent *& wset
 		else
 			rset->rows[m ++] = txn->get_access_original_row(i);
 	}
-
+  
   DEBUG("write set %d and read set %d\n", wset->set_size, rset->set_size);
 	assert(n == wset->set_size);
 	assert(m == rset->set_size);
@@ -193,6 +193,17 @@ RC Wkdb::get_rw_set(TxnManager * txn, wkdb_set_ent * &rset, wkdb_set_ent *& wset
 	return RCOK;
 }
 
+RC Wkdb::free_rw_set(TxnManager * txn, wkdb_set_ent * &rset, wkdb_set_ent *& wset) {
+#if CC_ALG == WOOKONG
+	wset->set_size = txn->get_write_set_size();
+	rset->set_size = txn->get_read_set_size();
+  mem_allocator.free(wset->rows, sizeof(row_t *) * wset->set_size);
+  mem_allocator.free(rset->rows, sizeof(row_t *) * rset->set_size);
+  mem_allocator.free(wset, sizeof(wkdb_set_ent));
+  mem_allocator.free(rset, sizeof(wkdb_set_ent));
+#endif
+	return RCOK;
+}
 
 RC Wkdb::find_bound(TxnManager * txn) {
   RC rc = RCOK;

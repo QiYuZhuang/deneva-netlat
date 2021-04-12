@@ -398,6 +398,7 @@ void MessageThread::run() {
   }
   assert(msg);
   assert(dest_node_id < g_total_node_cnt);
+  assert(dest_node_id != g_node_id);
 #if SEND_TO_SELF_PAHSE == 0
   if (dest_node_id == g_node_id) {// && 
 #elif SEND_TO_SELF_PAHSE == 1

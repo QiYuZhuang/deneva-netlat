@@ -55,7 +55,7 @@
 #include "key_xid.h"
 #include "rts_cache.h"
 #include "http.h"
-
+#include "hlc.h"
 
 #include <boost/lockfree/queue.hpp>
 #include "da_block_queue.h"
@@ -102,6 +102,7 @@ KeyXidCache wkdb_key_xid_cache;
 RtsCache wkdb_rts_cache;
 // QTcpQueue tcp_queue;
 TcpTimestamp tcp_ts;
+HLCTime hlc_ts;
 
 boost::lockfree::queue<DAQuery*, boost::lockfree::fixed_sized<true>> da_query_queue{100};
 DABlockQueue da_gen_qry_queue(50);

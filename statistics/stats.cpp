@@ -130,6 +130,11 @@ void Stats_thd::clear() {
   trans_cur_row_init_time=0;
 
   trans_access_lock_wait_time=0;
+  // trans network
+  trans_process_network=0;
+  trans_validation_network=0;
+  trans_commit_network=0;
+  trans_abort_network=0;
   // trans mvcc
   trans_mvcc_clear_history=0;
   trans_mvcc_access=0;
@@ -597,6 +602,12 @@ void Stats_thd::print(FILE * outf, bool prog) {
   ",trans_commit_time=%f"
   ",trans_abort_time=%f"
   ",trans_access_lock_wait_time=%f"
+  // trans network
+  ",trans_process_network=%f"
+  ",trans_validation_network=%f"
+  ",trans_commit_network=%f"
+  ",trans_abort_network=%f"
+  // trans mvcc
   ",trans_mvcc_clear_history=%f"
   ",trans_mvcc_access=%f"
     // trans get row
@@ -629,6 +640,8 @@ void Stats_thd::print(FILE * outf, bool prog) {
           trans_2pc_time / BILLION,
           trans_prepare_time / BILLION, trans_validate_time / BILLION, trans_finish_time / BILLION,
           trans_commit_time / BILLION, trans_abort_time / BILLION, trans_access_lock_wait_time / BILLION,
+          // trans network
+          trans_process_network / BILLION, trans_validation_network / BILLION, trans_commit_network / BILLION, trans_abort_network / BILLION, 
           trans_mvcc_clear_history / BILLION, trans_mvcc_access / BILLION,
           trans_cur_row_copy_time / BILLION, trans_cur_row_init_time / BILLION,
           dli_init_time / BILLION, dli_lock_time / BILLION, dli_check_conflict_time / BILLION, dli_final_validate / BILLION,
@@ -652,12 +665,19 @@ void Stats_thd::print(FILE * outf, bool prog) {
   ",avg_trans_validate_time=%f"
   ",avg_trans_finish_time=%f"
   ",avg_trans_commit_time=%f"
-  ",avg_trans_abort_time=%f",
+  ",avg_trans_abort_time=%f"
+  // trans network
+  ",avg_trans_process_network=%f"
+  ",avg_trans_validation_network=%f"
+  ",avg_trans_commit_network=%f"
+  ",avg_trans_abort_network=%f",
           trans_total_run_time / (trans_total_count * BILLION), trans_init_time / (trans_init_count * BILLION), trans_process_time / (trans_process_count * BILLION),
           trans_get_access_time / (trans_get_access_count * BILLION), trans_store_access_time / (trans_store_access_count * BILLION), trans_get_row_time / (trans_get_row_count * BILLION),
           trans_2pc_time / (trans_2pc_count * BILLION),
           trans_prepare_time / (trans_prepare_count * BILLION), trans_validate_time / (trans_validate_count * BILLION), trans_finish_time / (trans_finish_count * BILLION),
-          trans_commit_time / (trans_commit_count * BILLION), trans_abort_time / (trans_abort_count * BILLION));
+          trans_commit_time / (trans_commit_count * BILLION), trans_abort_time / (trans_abort_count * BILLION), 
+          // trans network
+          trans_process_network / (trans_process_count * BILLION), trans_validation_network /(trans_validate_count * BILLION), trans_commit_network / (trans_commit_count * BILLION), trans_abort_network / (trans_abort_count * BILLION));
   fprintf(outf,
   ",trans_total_run_count=%ld"
   ",trans_init_count=%ld"
@@ -1351,6 +1371,11 @@ void Stats_thd::combine(Stats_thd * stats) {
   trans_store_access_time+=stats->trans_store_access_time;
 
   trans_access_lock_wait_time+=stats->trans_access_lock_wait_time;
+  // trans network
+  trans_process_network+=stats->trans_process_network;
+  trans_validation_network+=stats->trans_validation_network;
+  trans_commit_network+=stats->trans_commit_network;
+  trans_abort_network+=stats->trans_abort_network;
   // trans mvcc
   trans_mvcc_clear_history+=stats->trans_mvcc_clear_history;
   trans_mvcc_access+=stats->trans_mvcc_access;

@@ -247,8 +247,7 @@ BaseQuery * TPCCQueryGenerator::gen_new_order(uint64_t home_partition) {
         partitions_accessed.insert(wh_to_part(item->ol_supply_w_id));
       } else {
         // select warehouse from among those already selected
-        while (partitions_accessed.count(wh_to_part(item->ol_supply_w_id = URand(1, g_num_wh))) ==
-               0) {
+        while (partitions_accessed.count(wh_to_part(item->ol_supply_w_id = URand(1, g_num_wh))) == 0) {
         }
       }
     }

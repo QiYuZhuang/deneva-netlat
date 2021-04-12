@@ -54,6 +54,7 @@
 #include "key_xid.h"
 #include "rts_cache.h"
 #include "http.h"
+#include "hlc.h"
 
 void network_test();
 void network_test_recv();
@@ -290,6 +291,12 @@ int main(int argc, char *argv[]) {
 		printf("Initializing tcp queue... ");
 		fflush(stdout);
 		tcp_ts.init(all_thd_cnt);
+		printf("Done\n");
+	}
+	if (g_ts_alloc == LTS_HLC_CLOCK) {
+		printf("Initializing hlc time... ");
+		fflush(stdout);
+		hlc_ts.init();
 		printf("Done\n");
 	}
 

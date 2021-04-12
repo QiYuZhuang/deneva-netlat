@@ -124,6 +124,11 @@ public:
   double trans_cur_row_init_time=0;
 
   double trans_access_lock_wait_time=0;
+  // trans network
+  double trans_process_network=0;
+  double trans_validation_network=0;
+  double trans_commit_network=0;
+  double trans_abort_network=0;
   // trans mvcc
   double trans_mvcc_clear_history=0;
   double trans_mvcc_access=0;

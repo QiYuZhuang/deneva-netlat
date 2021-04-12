@@ -44,6 +44,7 @@ public:
   static bool     _pre_abort;
 private:
   RC get_rw_set(TxnManager * txni, tictoc_set_ent * &rset, tictoc_set_ent *& wset);
+  RC free_rw_set(TxnManager * txn, tictoc_set_ent * &rset, tictoc_set_ent *& wset);
   RC validate_coor(TxnManager * txn);
   RC validate_part(TxnManager * txn);
   RC validate_write_set(tictoc_set_ent * wset, TxnManager * txn, uint64_t commit_ts);

@@ -90,12 +90,21 @@ public:
 										uint64_t timespan_short);
 	uint64_t starttime;
 	uint64_t restart_starttime;
-  uint64_t init_complete_time;
+  	uint64_t init_complete_time;
 	uint64_t wait_starttime;
 	uint64_t write_cnt;
 	uint64_t abort_cnt;
 	uint64_t prepare_start_time;
 	uint64_t finish_start_time;
+
+	uint64_t trans_process_time;
+	uint64_t trans_prepare_time;
+	// trans network
+	uint64_t trans_process_network_start_time;
+	uint64_t trans_validate_network_start_time;
+	uint64_t trans_commit_network_start_time;
+	uint64_t trans_abort_network_start_time;
+
 	double total_process_time;
 	double process_time;
 	double total_local_wait_time;

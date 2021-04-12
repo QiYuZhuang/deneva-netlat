@@ -164,6 +164,7 @@ RC YCSBTxnManager::send_remote_request() {
   ycsb_query->partitions_touched.add_unique(GET_PART_ID(0,dest_node_id));
   DEBUG("ycsb send remote request %ld, %ld\n",txn->txn_id,txn->batch_id);
   msg_queue.enqueue(get_thd_id(),Message::create_message(this,RQRY),dest_node_id);
+  txn_stats.trans_process_network_start_time = get_sys_clock();
   return WAIT_REM;
 }
 

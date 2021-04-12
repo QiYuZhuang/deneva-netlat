@@ -33,7 +33,8 @@ Row_tictoc::CompareWait::operator() (TxnManager * en1, TxnManager * en2) const
 
 Row_tictoc::Row_tictoc(row_t * row) {
 	_row = row;
-	_latch = new pthread_mutex_t;
+	// _latch = new pthread_mutex_t;
+    _latch = (pthread_mutex_t *)mem_allocator.alloc(sizeof(pthread_mutex_t));
 	_blatch = false;
 	pthread_mutex_init( _latch, NULL );
 	_wts = 0;

@@ -49,6 +49,7 @@
 #include "ssi.h"
 #include "wsi.h"
 #include "manager.h"
+#include "hlc.h"
 
 void TxnStats::init() {
 	starttime=0;
@@ -535,8 +536,9 @@ RC TxnManager::start_abort() {
 	uint64_t prepare_start_time = get_sys_clock();
 	txn_stats.prepare_start_time = prepare_start_time;
 	uint64_t process_time_span  = prepare_start_time - txn_stats.restart_starttime;
-	INC_STATS(get_thd_id(), trans_process_time, process_time_span);
-  INC_STATS(get_thd_id(), trans_process_count, 1);
+	txn_stats.trans_process_time = process_time_span;
+	// INC_STATS(get_thd_id(), trans_process_time, process_time_span);
+  	// INC_STATS(get_thd_id(), trans_process_count, 1);
 	txn->rc = Abort;
 	DEBUG("%ld start_abort\n",get_txn_id());
 
@@ -546,6 +548,7 @@ RC TxnManager::start_abort() {
 	// INC_STATS(get_thd_id(), trans_prepare_time, prepare_timespan);
   	// INC_STATS(get_thd_id(), trans_prepare_count, 1);
 	if(query->partitions_touched.size() > 1) {
+		txn_stats.trans_abort_network_start_time = get_sys_clock();
 		send_finish_messages();
 		abort();
 		return Abort;
@@ -579,23 +582,32 @@ RC TxnManager::start_commit() {
 	uint64_t prepare_start_time = get_sys_clock();
 	txn_stats.prepare_start_time = prepare_start_time;
 	uint64_t process_time_span  = prepare_start_time - txn_stats.restart_starttime;
-	INC_STATS(get_thd_id(), trans_process_time, process_time_span);
-  	INC_STATS(get_thd_id(), trans_process_count, 1);
+	txn_stats.trans_process_time = process_time_span;
+	// INC_STATS(get_thd_id(), trans_process_time, process_time_span);
+  	// INC_STATS(get_thd_id(), trans_process_count, 1);
 	RC rc = RCOK;
 	DEBUG("%ld start_commit RO?%d\n",get_txn_id(),query->readonly());
 	if(is_multi_part()) {
 		if(CC_ALG == TICTOC) {
 			rc = validate();
 			if (rc != Abort) {
+				txn_stats.trans_validate_network_start_time = get_sys_clock();
 				send_prepare_messages();
 				rc = WAIT_REM;
 			}
 		} else if (!query->readonly() || CC_ALG == OCC || CC_ALG == MAAT || CC_ALG == DLI_BASE ||
 				CC_ALG == DLI_OCC || CC_ALG == SILO || CC_ALG == BOCC || CC_ALG == SSI) {
 			// send prepare messages
+			txn_stats.trans_validate_network_start_time = get_sys_clock();
 			send_prepare_messages();
 			rc = WAIT_REM;
 		} else {
+			if(CC_ALG == WOOKONG && IS_LOCAL(get_txn_id()) && rc == RCOK) {
+				rc = wkdb_man.find_bound(this);
+				if (g_ts_alloc == LTS_HLC_CLOCK) {
+					hlc_ts.update_with_cts(get_commit_timestamp());
+				}
+			}
 			uint64_t finish_start_time = get_sys_clock();
 			txn_stats.finish_start_time = finish_start_time;
 			// uint64_t prepare_timespan  = finish_start_time - txn_stats.prepare_start_time;
@@ -604,6 +616,7 @@ RC TxnManager::start_commit() {
 			if(CC_ALG == WSI) {
 				wsi_man.gene_finish_ts(this);
 			}
+			txn_stats.trans_commit_network_start_time = get_sys_clock();
 			send_finish_messages();
 			rsp_cnt = 0;
 			rc = commit();
@@ -627,6 +640,7 @@ RC TxnManager::start_commit() {
 			txn->rc = Abort;
 			DEBUG("%ld start_abort\n",get_txn_id());
 			if(query->partitions_touched.size() > 1) {
+				txn_stats.trans_abort_network_start_time = get_sys_clock();
 				send_finish_messages();
 				abort();
 				rc = Abort;
@@ -1038,9 +1052,8 @@ RC TxnManager::get_row(row_t * row, access_t type, row_t *& row_rtn) {
 #if CC_ALG == TICTOC
 	if (!isexist) {
 		++txn->row_cnt;
-		if (type == WR)
-			++txn->write_cnt;
-			txn->accesses.add(access);
+		if (type == WR) ++txn->write_cnt;
+		txn->accesses.add(access);
 	}
 #else
 	++txn->row_cnt;
@@ -1177,6 +1190,9 @@ RC TxnManager::validate() {
 		// Note: home node must be last to validate
 		if(IS_LOCAL(get_txn_id()) && rc == RCOK) {
 			rc = wkdb_man.find_bound(this);
+			if (g_ts_alloc == LTS_HLC_CLOCK) {
+				hlc_ts.update_with_cts(get_commit_timestamp());
+			}
 		}
 	}
 	if ((CC_ALG == DTA) && rc == RCOK) {

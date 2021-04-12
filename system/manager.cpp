@@ -19,6 +19,7 @@
 #include "txn.h"
 #include "pthread.h"
 #include "http.h"
+#include "hlc.h"
 //#include <jemallloc.h>
 __thread uint64_t Manager::_max_cts = 1;
 void Manager::init() {
@@ -63,7 +64,8 @@ uint64_t Manager::get_ts(uint64_t thread_id) {
 		break;
 	case LTS_TCP_CLOCK:
 		time = tcp_ts.TcpGetTimeStamp(thread_id);
-
+	case LTS_HLC_CLOCK:
+		time = hlc_ts.getCurrentHLC();
 		break;
 	default :
 		assert(false);

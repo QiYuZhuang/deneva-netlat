@@ -263,6 +263,9 @@ void WorkerThread::commit() {
   uint64_t two_pc_timespan  = end_time - txn_man->txn_stats.prepare_start_time;
   uint64_t finish_timespan  = end_time - txn_man->txn_stats.finish_start_time;
   uint64_t prepare_timespan = txn_man->txn_stats.finish_start_time - txn_man->txn_stats.prepare_start_time;
+	INC_STATS(get_thd_id(), trans_process_time, txn_man->txn_stats.trans_process_time);
+  INC_STATS(get_thd_id(), trans_process_count, 1);
+
   INC_STATS(get_thd_id(), trans_prepare_time, prepare_timespan);
   INC_STATS(get_thd_id(), trans_prepare_count, 1);
 
@@ -298,6 +301,9 @@ void WorkerThread::abort() {
   uint64_t two_pc_timespan  = end_time - txn_man->txn_stats.prepare_start_time;
   uint64_t finish_timespan  = end_time - txn_man->txn_stats.finish_start_time;
   uint64_t prepare_timespan = txn_man->txn_stats.finish_start_time - txn_man->txn_stats.prepare_start_time;
+	INC_STATS(get_thd_id(), trans_process_time, txn_man->txn_stats.trans_process_time);
+  INC_STATS(get_thd_id(), trans_process_count, 1);
+
   INC_STATS(get_thd_id(), trans_prepare_time, prepare_timespan);
   INC_STATS(get_thd_id(), trans_prepare_count, 1);
 
@@ -463,6 +469,7 @@ RC WorkerThread::run() {
     ready_starttime = get_sys_clock();
 #if CC_ALG != CALVIN
     msg->release();
+    delete msg;
 #endif
     INC_STATS(get_thd_id(),worker_release_msg_time,get_sys_clock() - ready_starttime);
 
@@ -566,7 +573,7 @@ RC WorkerThread::process_rack_prep(Message * msg) {
 #endif
 
   if (responses_left > 0) return WAIT;
-
+  INC_STATS(get_thd_id(), trans_validation_network, get_sys_clock() - txn_man->txn_stats.trans_validate_network_start_time);
   // Done waiting
   if(txn_man->get_rc() == RCOK) {
     if (CC_ALG == TICTOC)
@@ -589,6 +596,8 @@ RC WorkerThread::process_rack_prep(Message * msg) {
   if(CC_ALG == WSI) {
     wsi_man.gene_finish_ts(txn_man);
   }
+  if (rc == Abort || txn_man->get_rc() == Abort) txn_man->txn_stats.trans_abort_network_start_time = get_sys_clock();
+  else txn_man->txn_stats.trans_commit_network_start_time = get_sys_clock();
   txn_man->send_finish_messages();
   if(rc == Abort) {
     txn_man->abort();
@@ -612,9 +621,11 @@ RC WorkerThread::process_rack_rfin(Message * msg) {
   txn_man->txn_stats.twopc_time += get_sys_clock() - txn_man->txn_stats.wait_starttime;
 
   if(txn_man->get_rc() == RCOK) {
+    INC_STATS(get_thd_id(), trans_commit_network, get_sys_clock() - txn_man->txn_stats.trans_commit_network_start_time);
     //txn_man->commit();
     commit();
   } else {
+    INC_STATS(get_thd_id(), trans_abort_network, get_sys_clock() - txn_man->txn_stats.trans_abort_network_start_time);
     //txn_man->abort();
     abort();
   }
@@ -624,7 +635,7 @@ RC WorkerThread::process_rack_rfin(Message * msg) {
 RC WorkerThread::process_rqry_rsp(Message * msg) {
   DEBUG("RQRY_RSP %ld\n",msg->get_txn_id());
   assert(IS_LOCAL(msg->get_txn_id()));
-
+  INC_STATS(get_thd_id(), trans_process_network, get_sys_clock() - txn_man->txn_stats.trans_process_network_start_time);
   txn_man->txn_stats.remote_wait_time += get_sys_clock() - txn_man->txn_stats.wait_starttime;
 
   if(((QueryResponseMessage*)msg)->rc == Abort) {

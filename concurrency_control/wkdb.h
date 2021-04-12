@@ -42,6 +42,7 @@ public:
   RC find_bound(TxnManager * txn);
 private:
   RC get_rw_set(TxnManager * txni, wkdb_set_ent * &rset, wkdb_set_ent *& wset);
+  RC free_rw_set(TxnManager * txni, wkdb_set_ent * &rset, wkdb_set_ent *& wset);
  	sem_t 	_semaphore;
 };
 

@@ -65,17 +65,17 @@
 /***********************************************/
 // Simulation + Hardware
 /***********************************************/
-#define NODE_CNT 2
+#define NODE_CNT 16
 #define THREAD_CNT 4
-#define REM_THREAD_CNT 1
-#define SEND_THREAD_CNT 1
+#define REM_THREAD_CNT 2
+#define SEND_THREAD_CNT 2
 #define CORE_CNT 2
 // PART_CNT should be at least NODE_CNT
 #define PART_CNT NODE_CNT
 #define CLIENT_NODE_CNT NODE_CNT
 #define CLIENT_THREAD_CNT 4
-#define CLIENT_REM_THREAD_CNT 1
-#define CLIENT_SEND_THREAD_CNT 1
+#define CLIENT_REM_THREAD_CNT 2
+#define CLIENT_SEND_THREAD_CNT 2
 #define CLIENT_RUNTIME false
 
 #define LOAD_METHOD LOAD_MAX
@@ -159,7 +159,7 @@
 
 // WAIT_DIE, NO_WAIT, TIMESTAMP, MVCC, CALVIN, MAAT, WOOKONG, TICTOC, SI
 #define ISOLATION_LEVEL SERIALIZABLE
-#define CC_ALG CNULL
+#define CC_ALG WOOKONG
 #define YCSB_ABORT_MODE false
 #define QUEUE_CAPACITY_NEW 1000000
 // all transactions acquire tuples according to the primary key order.
@@ -234,8 +234,8 @@
 #define DATA_PERC 100
 #define ACCESS_PERC 0.03
 #define INIT_PARALLELISM 8
-#define SYNTH_TABLE_SIZE 16777216
-#define ZIPF_THETA 0.0
+#define SYNTH_TABLE_SIZE 268435456
+#define ZIPF_THETA 0.6
 #define TXN_WRITE_PERC 0.5
 #define TUP_WRITE_PERC 0.5
 #define SCAN_PERC           0
@@ -411,6 +411,7 @@ enum PPSTxnType {
 #define TS_CLOCK          4
 #define LTS_CURL_CLOCK          5
 #define LTS_TCP_CLOCK          6
+#define LTS_HLC_CLOCK          7
 
 #define LTS_TCP_IP  "10.77.110.147"
 #define LTS_TCP_PORT  62389
@@ -458,3 +459,4 @@ enum PPSTxnType {
 #define ENVIRONMENT_EC2 false
 
 #endif
+
