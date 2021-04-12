@@ -53,8 +53,6 @@
 #include "tictoc.h"
 #include "key_xid.h"
 #include "rts_cache.h"
-#include "http.h"
-#include "hlc.h"
 
 void network_test();
 void network_test_recv();
@@ -287,18 +285,6 @@ int main(int argc, char *argv[]) {
 		all_thd_cnt += 2; // sequencer + scheduler thread
 #endif
 
-	if (g_ts_alloc == LTS_TCP_CLOCK) {
-		printf("Initializing tcp queue... ");
-		fflush(stdout);
-		tcp_ts.init(all_thd_cnt);
-		printf("Done\n");
-	}
-	if (g_ts_alloc == LTS_HLC_CLOCK) {
-		printf("Initializing hlc time... ");
-		fflush(stdout);
-		hlc_ts.init();
-		printf("Done\n");
-	}
 
 	printf("%ld, %ld, %ld, %d \n", thd_cnt, rthd_cnt, sthd_cnt, g_abort_thread_cnt);
 	printf("all_thd_cnt: %ld, g_this_total_thread_cnt: %d \n", all_thd_cnt, g_this_total_thread_cnt);
@@ -450,11 +436,7 @@ int main(int argc, char *argv[]) {
 	msg_pool.free_all();
 	qry_pool.free_all();
 	*/
-	if (g_ts_alloc == LTS_TCP_CLOCK) {
-		for (uint32_t i = 0; i < all_thd_cnt; i++) {
-			tcp_ts.CloseToLts(i);
-		}
-	}
+
 	return 0;
 }
 

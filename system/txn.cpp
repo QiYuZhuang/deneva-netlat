@@ -49,7 +49,6 @@
 #include "ssi.h"
 #include "wsi.h"
 #include "manager.h"
-#include "hlc.h"
 
 void TxnStats::init() {
 	starttime=0;
@@ -605,7 +604,7 @@ RC TxnManager::start_commit() {
 			if(CC_ALG == WOOKONG && IS_LOCAL(get_txn_id()) && rc == RCOK) {
 				rc = wkdb_man.find_bound(this);
 				if (g_ts_alloc == LTS_HLC_CLOCK) {
-					hlc_ts.update_with_cts(get_commit_timestamp());
+					// hlc_ts.update_with_cts(get_commit_timestamp());
 				}
 			}
 			uint64_t finish_start_time = get_sys_clock();
@@ -1191,7 +1190,7 @@ RC TxnManager::validate() {
 		if(IS_LOCAL(get_txn_id()) && rc == RCOK) {
 			rc = wkdb_man.find_bound(this);
 			if (g_ts_alloc == LTS_HLC_CLOCK) {
-				hlc_ts.update_with_cts(get_commit_timestamp());
+				// hlc_ts.update_with_cts(get_commit_timestamp());
 			}
 		}
 	}
