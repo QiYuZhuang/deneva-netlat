@@ -9,3 +9,6 @@ runcl
 obj/*
 gnuplot-5.2.8/
 input.txt
+scripts/*
+deneva.si4project/*
+*.diff
