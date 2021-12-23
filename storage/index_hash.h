@@ -48,6 +48,7 @@ public:
 	void insert_item_nonunique(idx_key_t key, itemid_t * item, int part_id);
 	void read_item(idx_key_t key, itemid_t * &item);
 	void read_item(idx_key_t key, uint32_t count, itemid_t * &item);
+	void my_read_item(uint64_t count, itemid_t * &item);
 	BucketNode * 	first_node;
 	uint64_t 		node_cnt;
 	bool 			locked;
@@ -73,6 +74,12 @@ public:
 	RC	 		index_read(idx_key_t key, int count, itemid_t * &item, int part_id=-1);
 	RC	 		index_read(idx_key_t key, itemid_t * &item,
 							int part_id=-1, int thd_id=0);
+
+	virtual uint64_t get_count() override;
+
+  	virtual void get_index_by_id(uint64_t id, uint64_t count, itemid_t *&item) override;
+
+	uint64_t get_bucket_count(uint64_t id);
 
 	// the following call returns a list of items
 //	RC 			index_read(idx_key_t key, Link_Item * &li, uint64_t &item_cnt);

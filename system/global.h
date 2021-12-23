@@ -94,6 +94,7 @@ class DABlockQueue;
 class DtaTimeTable;
 class KeyXidCache;
 class RtsCache;
+class adaptor;
 // class QTcpQueue;
 
 typedef uint32_t UInt32;
@@ -284,6 +285,11 @@ extern uint32_t g_max_num_waits;
 // Replication
 extern UInt32 g_repl_type;
 extern UInt32 g_repl_cnt;
+
+// WOOKONG
+extern UInt32 g_adaptor_thread_cnt;
+extern adaptor wookong_governor;
+extern UInt32 g_adaptor_sleep_time;
 
 enum RC { RCOK=0, Commit, Abort, WAIT, WAIT_REM, ERROR, FINISH, NONE};
 enum RemReqType {

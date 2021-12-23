@@ -126,6 +126,9 @@ public:
 	#elif CC_ALG == MAAT
 		Row_maat * manager;
 	#elif CC_ALG == WOOKONG
+		volatile uint64_t conflict_num;
+		volatile uint64_t conflict_level;
+		volatile uint64_t read_cnt;
 		Row_wkdb * manager;
 	#elif CC_ALG == TICTOC
 		Row_tictoc * manager;

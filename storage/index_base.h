@@ -46,6 +46,10 @@ public:
     return RCOK;
   };
 
+  virtual uint64_t get_count() = 0;
+
+  virtual void get_index_by_id(uint64_t id, uint64_t count, itemid_t *&item) = 0;
+
 	// the index in on "table". The key is the merged key of "fields"
 	table_t * 			table;
 };

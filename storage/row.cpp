@@ -55,6 +55,11 @@ RC row_t::init(table_t *host_table, uint64_t part_id, uint64_t row_id) {
 #else
 	data = (char *) mem_allocator.alloc(sizeof(uint64_t) * 1);
 #endif
+#if CC_ALG == WOOKONG
+	read_cnt = 0;
+	conflict_num = 0;
+	conflict_level = 0;
+#endif
 	return RCOK;
 }
 

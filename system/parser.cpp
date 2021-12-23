@@ -183,6 +183,11 @@ void parser(int argc, char * argv[]) {
 #if LOGGING
   g_total_thread_cnt += g_logger_thread_cnt; // logger thread
 #endif
+
+#if CC_ALG == WOOKONG
+  g_total_thread_cnt += g_adaptor_thread_cnt;
+#endif
+
 #if CC_ALG == CALVIN
     g_total_thread_cnt += 2; // sequencer + scheduler thread
   // Remove abort thread

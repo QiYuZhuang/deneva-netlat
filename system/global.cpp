@@ -54,6 +54,7 @@
 #include "tictoc.h"
 #include "key_xid.h"
 #include "rts_cache.h"
+#include "adaptor.h"
 
 #include <boost/lockfree/queue.hpp>
 #include "da_block_queue.h"
@@ -99,6 +100,7 @@ WkdbTimeTable wkdb_time_table;
 KeyXidCache wkdb_key_xid_cache;
 RtsCache wkdb_rts_cache;
 // QTcpQueue tcp_queue;
+adaptor wookong_governor;
 
 boost::lockfree::queue<DAQuery*, boost::lockfree::fixed_sized<true>> da_query_queue{100};
 DABlockQueue da_gen_qry_queue(50);
@@ -169,6 +171,13 @@ UInt32 g_send_thread_cnt = SEND_THREAD_CNT;
 UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + 3;
 #else
 UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + 1;
+#endif
+#if CC_ALG == WOOKONG
+UInt32 g_adaptor_thread_cnt = 2;
+UInt32 g_adaptor_sleep_time = 1000; // 1000 us = 1 ms, initial 5 s
+#else
+UInt32 g_adaptor_thread_cnt = 0;
+UInt32 g_adaptor_sleep_time = UINT64_MAX;
 #endif
 
 UInt32 g_total_client_thread_cnt = g_client_thread_cnt + g_client_rem_thread_cnt + g_client_send_thread_cnt;

@@ -69,6 +69,11 @@ CalvinLockThread * calvin_lock_thds;
 CalvinSequencerThread * calvin_seq_thds;
 #endif
 
+#if CC_ALG == WOOKONG
+AdaptorThread1 * adaptor1_thds;
+AdaptorThread2 * adaptor2_thds;
+#endif
+
 // defined in parser.cpp
 void parser(int argc, char * argv[]);
 
@@ -284,7 +289,9 @@ int main(int argc, char *argv[]) {
 #if CC_ALG == CALVIN
 		all_thd_cnt += 2; // sequencer + scheduler thread
 #endif
-
+#if CC_ALG == WOOKONG
+	all_thd_cnt += 2;
+#endif
 
 	printf("%ld, %ld, %ld, %d \n", thd_cnt, rthd_cnt, sthd_cnt, g_abort_thread_cnt);
 	printf("all_thd_cnt: %ld, g_this_total_thread_cnt: %d \n", all_thd_cnt, g_this_total_thread_cnt);
@@ -304,6 +311,10 @@ int main(int argc, char *argv[]) {
 #if CC_ALG == CALVIN
 	calvin_lock_thds = new CalvinLockThread[1];
 	calvin_seq_thds = new CalvinSequencerThread[1];
+#endif
+#if CC_ALG == WOOKONG
+	adaptor1_thds = new AdaptorThread1[1]; // SA
+	adaptor2_thds = new AdaptorThread2[1]; // update conflict level
 #endif
 	// query_queue should be the last one to be initialized!!!
 	// because it collects txn latency
@@ -410,6 +421,12 @@ int main(int argc, char *argv[]) {
 
 	calvin_seq_thds[0].init(id,g_node_id,m_wl);
 	pthread_create(&p_thds[id++], &attr, run_thread, (void *)&calvin_seq_thds[0]);
+#endif
+#if CC_ALG == WOOKONG
+	adaptor1_thds[0].init(id,g_node_id,m_wl);
+	pthread_create(&p_thds[id++], &attr, run_thread, (void *)&adaptor1_thds[0]);
+	adaptor2_thds[0].init(id,g_node_id,m_wl);
+	pthread_create(&p_thds[id++], &attr, run_thread, (void *)&adaptor2_thds[0]);
 #endif
 
 	worker_num_thds[0].init(id,g_node_id,m_wl);

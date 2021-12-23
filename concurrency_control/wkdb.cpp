@@ -86,6 +86,7 @@ RC Wkdb::validate(TxnManager * txn) {
     //2. write in the key's write xid
     if (cur_wrow->manager->write_trans) {
       if (cur_wrow->manager->write_trans != txn->get_txn_id()) {
+        cur_wrow->conflict_num++;
         wkdb_time_table.set_state(txn->get_thd_id(),txn->get_txn_id(),WKDB_ABORTED);
         rc = Abort;
         DEBUG("write trans already in use %lu, now txn %lu\n", cur_wrow->manager->write_trans, txn->get_txn_id())
@@ -102,6 +103,7 @@ RC Wkdb::validate(TxnManager * txn) {
     for(auto it = readxid_list->begin(); it != readxid_list->end(); it++) {
       if (lower >= upper) {
         ATOM_CAS(cur_wrow->manager->wkdb_avail,false,true);
+        cur_wrow->conflict_num++;
         goto VALID_END;
       }
 
@@ -125,7 +127,12 @@ RC Wkdb::validate(TxnManager * txn) {
         INC_STATS(txn->get_thd_id(),wkdb_case5_cnt,1);
         if (lower <= it_lower){
           //TRANS_LOG_WARN("DTAvalidation set lower = dta_txn->lower + 1, transid:%lu running_txn_id:%lu lower:%lu upper:%lu running_txn_id.lower:%lu running_txn_id.upper:%lu", ctx, part_ctx->GetTransID(), lower, upper, dta_txn->lower, dta_txn->upper);
-          lower = it_lower + 1;
+          // lower = it_lower + 1;
+          if (wookong_governor.get_state() >= CAL) {
+            lower = it_lower + wookong_governor.get_interval(cur_wrow);
+          } else {
+            lower = it_lower + 1;
+          }
           it_upper = lower < it_upper ? lower : it_upper;
           wkdb_time_table.set_upper(txn->get_thd_id(),*it,it_upper);
         } else if (lower < it_upper){
@@ -162,6 +169,13 @@ FINISH:
   txn->txn_stats.cc_time_short += timespan;
   free_rw_set(txn, rset, wset);
   DEBUG("WKDB Validate End %ld: %d [%lu,%lu]\n",txn->get_txn_id(),rc==RCOK,lower,upper);
+  if (IFFAIL(rc)) {
+    wookong_governor.inc_abort_count();
+    // printf("[INFO] (zhuang).7 abort.\n");
+  } else {
+    wookong_governor.inc_commit_count();
+    // printf("[INFO] (zhuang).7 commit.\n");
+  }
   sem_post(&_semaphore);
   return rc;
 

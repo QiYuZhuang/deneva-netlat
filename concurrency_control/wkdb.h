@@ -19,7 +19,10 @@
 
 #include "row.h"
 #include "semaphore.h"
+#include "adaptor.h"
 
+#define N_EQ(_x, _y) (_x != _y)
+#define EQ(_x, _y) (_x == _y)
 
 class TxnManager;
 

@@ -157,6 +157,24 @@ RC IndexHash::index_read(idx_key_t key, itemid_t * &item,
 	return rc;
 }
 
+uint64_t IndexHash::get_count() 
+{
+	return _bucket_cnt;
+}
+
+void IndexHash::get_index_by_id(uint64_t id, uint64_t count, itemid_t *&item)
+{
+	BucketHeader * cur_bkt = &_buckets[0][id];
+
+	cur_bkt->my_read_item(count, item);
+}
+
+uint64_t IndexHash::get_bucket_count(uint64_t id)
+{
+	BucketHeader * cur_bkt = &_buckets[0][id];
+	return cur_bkt->node_cnt;
+}
+
 /************** BucketHeader Operations ******************/
 
 void BucketHeader::init() {
@@ -204,6 +222,7 @@ void BucketHeader::insert_item(idx_key_t key,
 		item->next = cur_node->items;
 		cur_node->items = item;
 	}
+	node_cnt++;
 }
 
 
@@ -218,6 +237,7 @@ void BucketHeader::insert_item_nonunique(idx_key_t key,
   new_node->items = item;
   new_node->next = first_node;
   first_node = new_node;
+  node_cnt++;
 }
 
 void BucketHeader::read_item(idx_key_t key, itemid_t *&item) {
@@ -252,5 +272,23 @@ void BucketHeader::read_item(idx_key_t key, uint32_t count, itemid_t *&item) {
     }
     M_ASSERT_V(cur_node != NULL, "Key does not exist! %ld\n",key);
     assert(cur_node->key == key);
+	item = cur_node->items;
+}
+
+void BucketHeader::my_read_item(uint64_t count, itemid_t *&item) {
+    BucketNode * cur_node = first_node;
+    uint32_t ctr = 0;
+    while (cur_node != NULL) {
+		if (ctr == count) {
+			break;
+		}
+		++ctr;
+		cur_node = cur_node->next;
+    }
+    if (cur_node == NULL) {
+        item = NULL;
+        return;
+    }
+
 	item = cur_node->items;
 }

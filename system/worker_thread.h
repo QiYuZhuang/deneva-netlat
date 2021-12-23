@@ -68,4 +68,18 @@ public:
     void setup();
 
 };
+
+#if CC_ALG == WOOKONG
+class AdaptorThread1 : public Thread {
+public:
+    RC run();
+    void setup();
+};
+class AdaptorThread2 : public Thread {
+public:
+    RC run();
+    void setup();
+};
+#endif
+
 #endif

@@ -40,6 +40,15 @@
 #include "ssi.h"
 #include "focc.h"
 #include "bocc.h"
+#include "transport.h"
+#include <boost/bind.hpp>
+#include "index_hash.h"
+#include "index_btree.h"
+#include "ycsb.h"
+#include "tpcc.h"
+#include "da.h"
+#include "pps.h"
+#include "wl.h"
 
 void WorkerThread::setup() {
 	if( get_thd_id() == 0) {
@@ -1065,3 +1074,94 @@ RC WorkerNumThread::run() {
   fflush(stdout);
   return FINISH;
 }
+
+#if CC_ALG == WOOKONG
+RC AdaptorThread1::run() {
+  RC rc = RCOK;
+  tsetup();
+
+  while(!simulation->is_done()) {
+    progress_stats();
+    wookong_governor.run();
+  }
+
+  return rc;
+}
+
+void AdaptorThread1::setup() {
+
+}
+
+RC AdaptorThread2::run() {
+  tsetup();
+
+  while(!simulation->is_done()) {
+    progress_stats();
+    int index_length = 0;
+    INDEX ** indexs;
+    switch (WORKLOAD) {
+      case YCSB:
+        indexs = ((YCSBWorkload *)_wl)->get_all_index(&index_length);
+        break;
+      case TPCC:
+        indexs = ((TPCCWorkload *)_wl)->get_all_index(&index_length);
+        break;
+      case PPS:
+        indexs = ((PPSWorkload *)_wl)->get_all_index(&index_length);
+        break;
+      case DA:
+        indexs = ((DAWorkload *)_wl)->get_all_index(&index_length);
+        break;
+      default:
+        assert(false);
+    }
+    if (indexs == NULL) {
+      return FINISH;
+    }
+    int high_count = 0;
+    int normal_count = 0;
+    int else_count = 0;
+    for (int i = 0; i < index_length; i++) {
+      INDEX *index = indexs[i];
+#if (INDEX_STRUCT == IDX_BTREE)
+// btree
+#else 
+// hash
+      uint64_t max_bucket = index->get_count();
+      for (uint64_t j = 0; j < max_bucket; j++) {
+        itemid_t * item;
+        uint64_t bucket_cnt = index->get_bucket_count(j);
+        for (uint64_t k = 0; k < bucket_cnt; k++) {
+          index->get_index_by_id(j, k, item);
+          row_t * row = ((row_t *)item->location);
+          if (row->conflict_num > 3) {
+            high_count++;
+            row->conflict_level = 2;
+          } else if (row->conflict_num >= 1) {
+            normal_count++;
+            row->conflict_level = 1;
+          } else {
+            else_count++;
+            row->conflict_level = 0;
+          }
+        }
+      }
+#endif
+    }
+    mem_allocator.free(indexs,sizeof(INDEX*));
+    // TODO (zhuang)
+    // sleep(1);
+    // printf("[INFO] (zhuang).10. sleep time: %u, high conflict: %d, normal conflict: %d, else count: %d\n", 
+    //       g_adaptor_sleep_time,high_count, normal_count, else_count);
+    // fflush(stdout);
+    usleep(g_adaptor_sleep_time);
+    // usleep(1000);
+    // sleep(10);
+  }
+  return FINISH;
+}
+
+void AdaptorThread2::setup() {
+
+}
+#endif
