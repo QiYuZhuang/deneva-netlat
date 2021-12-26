@@ -66,6 +66,13 @@ RC YCSBWorkload::init_schema(const char * schema_file) {
 	return RCOK;
 }
 
+INDEX ** YCSBWorkload::get_all_index(int *length){
+	INDEX ** indexs = (INDEX **)mem_allocator.alloc(sizeof(INDEX*));
+	indexs[0] = the_index;
+	*length = 1;
+	return indexs;
+}
+
 int
 YCSBWorkload::key_to_part(uint64_t key) {
 	//uint64_t rows_per_part = g_synth_table_size / g_part_cnt;

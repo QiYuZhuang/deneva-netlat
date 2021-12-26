@@ -22,6 +22,7 @@ class DAWorkload : public Workload {
   RC init_schema(const char* schema_file);
   RC get_txn_man(TxnManager*& txn_manager);
   void reset_tab_idx();
+  INDEX ** get_all_index(int *length){return NULL;}
   table_t* t_datab;
 	uint64_t nextstate;
   INDEX* i_datab;

@@ -40,6 +40,7 @@ public :
 	RC init_schema(const char * schema_file);
 	RC get_txn_man(TxnManager *& txn_manager);
 	int key_to_part(uint64_t key);
+  INDEX ** get_all_index(int *length);
 	INDEX * the_index;
 	table_t * the_table;
 private:

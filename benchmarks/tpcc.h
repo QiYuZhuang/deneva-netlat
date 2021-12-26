@@ -59,6 +59,7 @@ public:
 	RC init_table();
 	RC init_schema(const char * schema_file);
 	RC get_txn_man(TxnManager *& txn_manager);
+  INDEX ** get_all_index(int *length){return NULL;}
 	table_t * 		t_warehouse;
 	table_t * 		t_district;
 	table_t * 		t_customer;
