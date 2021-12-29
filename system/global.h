@@ -95,6 +95,7 @@ class DtaTimeTable;
 class KeyXidCache;
 class RtsCache;
 class adaptor;
+class TxnNode;
 // class QTcpQueue;
 
 typedef uint32_t UInt32;
@@ -290,6 +291,7 @@ extern UInt32 g_repl_cnt;
 extern UInt32 g_adaptor_thread_cnt;
 extern adaptor wookong_governor;
 extern UInt32 g_adaptor_sleep_time;
+extern std::set<TxnNode> txn_set;
 
 enum RC { RCOK=0, Commit, Abort, WAIT, WAIT_REM, ERROR, FINISH, NONE};
 enum RemReqType {

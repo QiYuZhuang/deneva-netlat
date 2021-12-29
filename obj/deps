@@ -712,7 +712,7 @@ obj/txn.o: system/txn.cpp system/helper.h system/global.h config.h \
  benchmarks/tpcc_query.h benchmarks/pps_query.h \
  concurrency_control/wkdb.h concurrency_control/adaptor.h storage/row.h \
  concurrency_control/tictoc.h concurrency_control/ssi.h \
- concurrency_control/wsi.h
+ concurrency_control/wsi.h concurrency_control/adaptor.h
 obj/txn_table.o: system/txn_table.cpp system/txn_table.h system/global.h \
  config.h statistics/stats.h statistics/../system/global.h \
  statistics/stats_array.h system/pool.h system/helper.h \

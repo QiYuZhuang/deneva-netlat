@@ -35,7 +35,7 @@ void Wkdb::init() {
 }
 
 RC Wkdb::validate(TxnManager * txn) {
-
+  // bool flag;
 #if CC_ALG == WOOKONG
 
   uint64_t start_time = get_sys_clock();
@@ -130,11 +130,17 @@ RC Wkdb::validate(TxnManager * txn) {
           // lower = it_lower + 1;
           if (wookong_governor.get_state() >= CAL) {
             lower = it_lower + wookong_governor.get_interval(cur_wrow);
+            if (wookong_governor.get_interval(cur_wrow) != 1) {
+              INC_STATS(txn->get_thd_id(),local_g_one_interval,1);
+            }
           } else {
             lower = it_lower + 1;
           }
           it_upper = lower < it_upper ? lower : it_upper;
           wkdb_time_table.set_upper(txn->get_thd_id(),*it,it_upper);
+          // 记录事务号
+          txn_set.insert(TxnNode(txn->get_thd_id(), txn->get_txn_id()));
+          INC_STATS(txn->get_thd_id(),local_sa_used_cnt,1);
         } else if (lower < it_upper){
           //TRANS_LOG_WARN("DTAvalidation set running_txn.upper < ctx.lower, transid:%lu running_txn_id:%lu lower:%lu upper:%lu running_txn_id.lower:%lu running_txn_id.upper:%lu", ctx, part_ctx->GetTransID(), lower, upper, dta_txn->lower, dta_txn->upper);
           it_upper = lower;

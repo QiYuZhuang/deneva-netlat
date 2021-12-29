@@ -313,6 +313,10 @@ public:
   double wkdb_range;
   uint64_t wkdb_commit_cnt;
 
+  uint64_t local_sa_used_cnt; // count of txn use sa
+  uint64_t local_sa_useful_cnt; // count of commited txn use sa
+  uint64_t local_g_one_interval; // count of txn get a interval greater than one
+
   // DTA
   uint64_t dta_validate_cnt;
   double dta_validate_time;

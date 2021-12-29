@@ -49,6 +49,7 @@
 #include "ssi.h"
 #include "wsi.h"
 #include "manager.h"
+#include "adaptor.h"
 
 void TxnStats::init() {
 	starttime=0;
@@ -456,6 +457,12 @@ RC TxnManager::commit() {
 	time_table.release(get_thd_id(),get_txn_id());
 #endif
 #if CC_ALG == WOOKONG
+	// 查找 txn_id
+	TxnNode tmp_node(get_thd_id(), get_txn_id());
+	if (txn_set.find(tmp_node) != txn_set.end()) {
+		INC_STATS(get_thd_id(), local_sa_useful_cnt, 1);
+		txn_set.erase(tmp_node);
+	} 
 	wkdb_time_table.release(get_thd_id(),get_txn_id());
 #endif
 #if CC_ALG == TICTOC

@@ -175,9 +175,11 @@ UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt 
 #if CC_ALG == WOOKONG
 UInt32 g_adaptor_thread_cnt = 2;
 UInt32 g_adaptor_sleep_time = 1000; // 1000 us = 1 ms, initial 5 s
+std::set<TxnNode> txn_set;
 #else
 UInt32 g_adaptor_thread_cnt = 0;
 UInt32 g_adaptor_sleep_time = UINT64_MAX;
+std::set<TxnNode> txn_set;
 #endif
 
 UInt32 g_total_client_thread_cnt = g_client_thread_cnt + g_client_rem_thread_cnt + g_client_send_thread_cnt;

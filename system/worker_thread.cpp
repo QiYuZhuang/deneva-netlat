@@ -1118,9 +1118,9 @@ RC AdaptorThread2::run() {
     if (indexs == NULL) {
       return FINISH;
     }
-    int high_count = 0;
-    int normal_count = 0;
-    int else_count = 0;
+    // int high_count = 0;
+    // int normal_count = 0;
+    // int else_count = 0;
     for (int i = 0; i < index_length; i++) {
       INDEX *index = indexs[i];
 #if (INDEX_STRUCT == IDX_BTREE)
@@ -1135,13 +1135,13 @@ RC AdaptorThread2::run() {
           index->get_index_by_id(j, k, item);
           row_t * row = ((row_t *)item->location);
           if (row->conflict_num > 3) {
-            high_count++;
+            // high_count++;
             row->conflict_level = 2;
           } else if (row->conflict_num >= 1) {
-            normal_count++;
+            // normal_count++;
             row->conflict_level = 1;
           } else {
-            else_count++;
+            // else_count++;
             row->conflict_level = 0;
           }
         }

@@ -66,4 +66,27 @@ private:
   int32_t max_interval_; // let random() generate a vaild interval
 };
 
+class TxnNode
+{
+public:
+  TxnNode() {
+    thd_id = -1;
+    txn_id = -1;
+  }
+  TxnNode(uint64_t new_thd_id, uint64_t new_txn_id) {
+    thd_id = new_thd_id;
+    txn_id = new_txn_id;
+  }
+  uint64_t thd_id;
+  uint64_t txn_id;
+
+  bool operator <(const TxnNode &b) const {
+    return (txn_id < b.txn_id) || (txn_id == b.txn_id && thd_id < b.thd_id);
+  }
+
+  bool operator ==(const TxnNode &b) const {
+    return (txn_id == b.txn_id) && (thd_id == b.thd_id);
+  }
+};
+
 #endif

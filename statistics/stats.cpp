@@ -342,6 +342,9 @@ void Stats_thd::clear() {
   wkdb_case5_cnt=0;
   wkdb_range=0;
   wkdb_commit_cnt=0;
+  local_sa_used_cnt = 0; // count of txn use sa
+  local_sa_useful_cnt = 0; // count of commited txn use sa
+  local_g_one_interval = 0; // count of txn get a interval more than one
 
   // Logging
   log_write_cnt=0;
@@ -523,6 +526,7 @@ void Stats_thd::print_client(FILE * outf, bool prog) {
   }
 
   //client_client_latency.print(outf);
+  fprintf(outf, "\n[zhuang] local_g_one_interval=%ld,local_sa_used_cnt=%ld,local_sa_useful_cnt=%ld\n", local_g_one_interval, local_sa_used_cnt, local_sa_useful_cnt);
 }
 
 void Stats_thd::print(FILE * outf, bool prog) {
@@ -1298,6 +1302,8 @@ void Stats_thd::print(FILE * outf, bool prog) {
         (double)start_abort_commit_latency.get_avg() / BILLION, start_abort_commit_latency.cnt);
   }
 
+  fprintf(outf, "\n[zhuang] local_g_one_interval=%ld,local_sa_used_cnt=%ld,local_sa_useful_cnt=%ld\n", local_g_one_interval, local_sa_used_cnt, local_sa_useful_cnt);
+
   //first_start_commit_latency.print(outf);
 
   //start_abort_commit_latency.print(outf);
@@ -1576,6 +1582,9 @@ void Stats_thd::combine(Stats_thd * stats) {
   wkdb_case5_cnt+=stats->wkdb_case5_cnt;
   wkdb_range+=stats->wkdb_range;
   wkdb_commit_cnt+=stats->wkdb_commit_cnt;
+  local_sa_used_cnt+=stats->local_sa_used_cnt;
+  local_sa_useful_cnt+=stats->local_sa_useful_cnt;
+  local_g_one_interval+=stats->local_g_one_interval;
 
   // Logging
   log_write_cnt+=stats->log_write_cnt;

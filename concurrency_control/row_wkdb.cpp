@@ -196,7 +196,7 @@ RC Row_wkdb::commit(access_t type, TxnManager * txn, row_t * data) {
     		write_trans = 0;
   		}
 
-		DEBUG("debuf %ld %ld\n",txn->get_txn_id(),_row->get_primary_key());
+		DEBUG("debug %ld %ld\n",txn->get_txn_id(),_row->get_primary_key());
 		debuffer_req(P_REQ, txn);
 
 	}
