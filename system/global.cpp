@@ -178,7 +178,7 @@ UInt32 g_adaptor_sleep_time = 1000; // 1000 us = 1 ms, initial 5 s
 std::set<TxnNode> txn_set;
 #else
 UInt32 g_adaptor_thread_cnt = 0;
-UInt32 g_adaptor_sleep_time = UINT64_MAX;
+UInt32 g_adaptor_sleep_time = UINT32_MAX;
 std::set<TxnNode> txn_set;
 #endif
 

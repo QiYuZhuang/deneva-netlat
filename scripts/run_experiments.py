@@ -117,7 +117,7 @@ for exp in exps:
                 else:
                     assert(False)
 
-                machines = machines_[:(cfgs["NODE_CNT"]*2)]
+                machines = machines_[:(cfgs["NODE_CNT"] + cfgs["CLIENT_NODE_CNT"])]
                 with open("ifconfig.txt", 'w') as f_ifcfg:
                     for m in machines:
                         f_ifcfg.write(m + "\n")

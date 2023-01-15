@@ -38,6 +38,7 @@
 #include "row_wsi.h"
 #include "row_null.h"
 #include "row_silo.h"
+#include "row_tcm.h"
 #include "mem_alloc.h"
 #include "manager.h"
 
@@ -101,6 +102,8 @@ void row_t::init_manager(row_t * row) {
 	manager = (Row_null *) mem_allocator.align_alloc(sizeof(Row_null));
 #elif CC_ALG == SILO
     manager = (Row_silo *) mem_allocator.align_alloc(sizeof(Row_silo));
+#elif CC_ALG == TCM 
+    manager = (Row_tcm *) mem_allocator.align_alloc(sizeof(Row_tcm));
 #endif
 
 #if CC_ALG != HSTORE && CC_ALG != HSTORE_SPEC && CC_ALG != TICTOC
@@ -367,6 +370,15 @@ RC row_t::get_row(access_t type, TxnManager *txn, Access *access) {
 	}
   INC_STATS(txn->get_thd_id(), trans_cur_row_copy_time, get_sys_clock() - copy_time);
 	goto end;
+#elif CC_ALG == TCM
+	lock_t lt = (type == RD || type == SCAN)? LOCK_SH : LOCK_EX;
+	rc = this->manager->lock_get(lt, txn);
+
+	if (rc == RCOK) {
+		access->data = this;
+	}
+
+	goto end;
 #elif CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == SSI || CC_ALG == WSI
 	//uint64_t thd_id = txn->get_thd_id();
 	// For TIMESTAMP RD, a new copy of the access->data will be returned.
@@ -535,8 +547,8 @@ RC row_t::get_row_post_wait(access_t type, TxnManager * txn, row_t *& row) {
 	RC rc = RCOK;
   uint64_t init_time = get_sys_clock();
 	assert(CC_ALG == WAIT_DIE || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == TIMESTAMP || CC_ALG == TICTOC || CC_ALG == SSI || CC_ALG == WSI || CC_ALG == DTA || CC_ALG == DLI_DTA || CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3 ||
-				 CC_ALG == TIMESTAMP);
-#if CC_ALG == WAIT_DIE
+				 CC_ALG == TIMESTAMP || CC_ALG == TCM);
+#if CC_ALG == WAIT_DIE || CC_ALG == TCM
 	assert(txn->lock_ready);
 	rc = RCOK;
 	//ts_t endtime = get_sys_clock();
@@ -599,6 +611,13 @@ uint64_t row_t::return_row(RC rc, access_t type, TxnManager *txn, row_t *row) {
 	assert (row == NULL || row == this || type == XP);
 	if (CC_ALG != CALVIN && ROLL_BACK &&
 			type == XP) {  // recover from previous writes. should not happen w/ Calvin
+		this->copy(row);
+	}
+	this->manager->lock_release(txn);
+	return 0;
+#elif CC_ALG == TCM
+	assert (row == NULL || row == this || type == XP);
+	if (ROLL_BACK && type == XP) {  // recover from previous writes. should not happen w/ Calvin
 		this->copy(row);
 	}
 	this->manager->lock_release(txn);

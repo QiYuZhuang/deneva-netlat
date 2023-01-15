@@ -71,22 +71,25 @@ def ycsb_scaling():
     wl = 'YCSB'
     #nnodes = [1,2,4,8,16,32,64]
     #nnodes = [1,2,4,8,16,32]
-    nnodes = [2]
+    nnodes = [8, 12, 16, 20, 24, 28]
+    # nnodes = [28]
 	  # algos=['WOOKONG','WAIT_DIE','MVCC','MAAT','TIMESTAMP','OCC']
     # algos=['MVCC','MAAT','TIMESTAMP','WOOKONG','OCC']
     # algos=['MAAT','MVCC','TIMESTAMP','OCC','DLI_DTA3','DLI_OCC']
-    algos=['WOOKONG']
-    base_table_size=1048576*8
-    #base_table_size=2097152*8
+    algos=['WOOKONG', 'TICTOC', 'TCM', 'MAAT']
+    # algos = ['TICTOC']
+    # base_table_size=1048576*8
+    base_table_size=2097152*8
     txn_write_perc = [0.5]
     tup_write_perc = [0.5]
     load = [10000]
+
     tcnt = [4]
     ctcnt = [4]
     scnt = [2]
     rcnt = [2]
     # skew = [0.6]
-    skew = [0.0,0.5,0.6,0.9]
+    skew = [0.6]
     fmt = ["WORKLOAD","NODE_CNT","CC_ALG","SYNTH_TABLE_SIZE","TUP_WRITE_PERC","TXN_WRITE_PERC","MAX_TXN_IN_FLIGHT","ZIPF_THETA","THREAD_CNT","CLIENT_THREAD_CNT","SEND_THREAD_CNT","REM_THREAD_CNT","CLIENT_SEND_THREAD_CNT","CLIENT_REM_THREAD_CNT"]
     exp = [[wl,n,algo,base_table_size*n,tup_wr_perc,txn_wr_perc,ld,sk,thr,cthr,sthr,rthr,sthr,rthr] for thr,cthr,sthr,rthr,txn_wr_perc,tup_wr_perc,sk,ld,n,algo in itertools.product(tcnt,ctcnt,scnt,rcnt,txn_write_perc,tup_write_perc,skew,load,nnodes,algos)]
     #txn_write_perc = [0.0]
@@ -145,7 +148,7 @@ def ycsb_skew():
     wl = 'YCSB'
     nnodes = [16]
     # algos=['WOOKONG','WAIT_DIE','MVCC','MAAT','TIMESTAMP','OCC']
-    algos=['WOOKONG']
+    algos=['TCM']
     # algos=['CALVIN']
     base_table_size=2097152*8
     txn_write_perc = [0.5]
@@ -154,9 +157,23 @@ def ycsb_skew():
     tcnt = [4]
     # skew = [0.0,0.25,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.9]
     # skew = [0.7,0.75]
-    # skew = [0.0,0.25,0.5,0.6]
-    skew = [0.8]
+    skew = [0.0,0.25,0.5,0.6, 0.7, 0.8, 0.9]
+    # skew = [0.6]
     # skew = [0.65]
+    fmt = ["WORKLOAD","NODE_CNT","CC_ALG","SYNTH_TABLE_SIZE","TUP_WRITE_PERC","TXN_WRITE_PERC","MAX_TXN_IN_FLIGHT","ZIPF_THETA","THREAD_CNT"]
+    exp = [[wl,n,algo,base_table_size*n,tup_wr_perc,txn_wr_perc,ld,sk,thr] for thr,txn_wr_perc,tup_wr_perc,ld,n,sk,algo in itertools.product(tcnt,txn_write_perc,tup_write_perc,load,nnodes,skew,algos)]
+    return fmt,exp
+
+def ycsb_tcm_test():
+    wl = 'YCSB'
+    nnodes = [2]
+    algos=['TCM']
+    base_table_size=2097152*8
+    txn_write_perc = [0.5]
+    tup_write_perc = [0.5]
+    load = [10000]
+    tcnt = [4]
+    skew = [0.6]
     fmt = ["WORKLOAD","NODE_CNT","CC_ALG","SYNTH_TABLE_SIZE","TUP_WRITE_PERC","TXN_WRITE_PERC","MAX_TXN_IN_FLIGHT","ZIPF_THETA","THREAD_CNT"]
     exp = [[wl,n,algo,base_table_size*n,tup_wr_perc,txn_wr_perc,ld,sk,thr] for thr,txn_wr_perc,tup_wr_perc,ld,n,sk,algo in itertools.product(tcnt,txn_write_perc,tup_write_perc,load,nnodes,skew,algos)]
     return fmt,exp
@@ -630,13 +647,14 @@ def tpcc_scaling_debug():
 
 def tpcc_scaling2():
     wl = 'TPCC'
-    nnodes = [1,2]
-    # nnodes = [4]
-    #nalgos=['WOOKONG','MAAT','MVCC','TIMESTAMP']
-    nalgos=dta_target_algos
-    npercpay=[1.0]
-    wh=128
-    load = [10000]
+    nnodes = [8]
+    # nnodes = [2]
+    nalgos=['WOOKONG','MAAT','TICTOC','TCM']
+    # nalgos=dta_target_algos
+    # nalgos = ["WOOKONG"]
+    npercpay=[0]
+    wh=32
+    load = [5000]
     fmt = ["WORKLOAD","NODE_CNT","CC_ALG","PERC_PAYMENT","NUM_WH","MAX_TXN_IN_FLIGHT"]
     exp = [[wl,n,cc,pp,wh*n,tif] for tif,pp,n,cc in itertools.product(load,npercpay,nnodes,nalgos)]
     return fmt,exp
@@ -785,6 +803,7 @@ experiment_map = {
     'ycsb_writes': ycsb_writes,
     'ycsb_skew': ycsb_skew,
     'ycsb_skew1': ycsb_skew1,
+    'ycsb_tcm_test': ycsb_tcm_test,
     'isolation_levels': isolation_levels,
     'ycsb_partitions': ycsb_partitions,
     'ycsb_partitions_abort': ycsb_partitions_abort,
@@ -837,7 +856,7 @@ configs = {
     "REPLICA_TYPE": "AP",
     "REM_THREAD_CNT": 1,
     "SEND_THREAD_CNT": 1,
-    "CLIENT_NODE_CNT" : 16, #"NODE_CNT",
+    "CLIENT_NODE_CNT" : 1, #"NODE_CNT",
     "CLIENT_THREAD_CNT" : 4,
     "CLIENT_REM_THREAD_CNT" : 1,
     "CLIENT_SEND_THREAD_CNT" : 1,

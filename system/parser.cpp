@@ -185,7 +185,7 @@ void parser(int argc, char * argv[]) {
 #endif
 
 #if CC_ALG == WOOKONG
-  g_total_thread_cnt += g_adaptor_thread_cnt;
+  // g_total_thread_cnt += g_adaptor_thread_cnt;
 #endif
 
 #if CC_ALG == CALVIN

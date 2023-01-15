@@ -265,6 +265,11 @@ void Transaction::init() {
 	DEBUG_M("Transaction::reset array accesses\n");
 	accesses.init(MAX_ROW_PER_TXN);
 
+	early = get_sys_clock();
+	late = UINT64_MAX;
+	end = false;
+	committed = false;
+
 	reset(0);
 }
 
@@ -276,7 +281,13 @@ void Transaction::reset(uint64_t thd_id) {
 	write_cnt = 0;
 	row_cnt = 0;
 	twopc_state = START;
-	rc = RCOK;
+
+	early = get_sys_clock();
+	late = UINT64_MAX;
+	end = false;
+	committed = false;
+	
+	rc = RCOK;	
 }
 
 void Transaction::release_accesses(uint64_t thd_id) {
@@ -369,6 +380,9 @@ void TxnManager::init(uint64_t thd_id, Workload * h_wl) {
 	registed_ = false;
 	txn_ready = true;
 	twopl_wait_start = 0;
+	is_commit = false;
+	ts_interval_lock = new pthread_mutex_t;
+	pthread_mutex_init(ts_interval_lock, NULL);
 
 	txn_stats.init();
 }
@@ -458,11 +472,11 @@ RC TxnManager::commit() {
 #endif
 #if CC_ALG == WOOKONG
 	// 查找 txn_id
-	TxnNode tmp_node(get_thd_id(), get_txn_id());
-	if (txn_set.find(tmp_node) != txn_set.end()) {
-		INC_STATS(get_thd_id(), local_sa_useful_cnt, 1);
-		txn_set.erase(tmp_node);
-	} 
+	// TxnNode tmp_node(get_thd_id(), get_txn_id());
+	// if (txn_set.find(tmp_node) != txn_set.end()) {
+	// 	INC_STATS(get_thd_id(), local_sa_useful_cnt, 1);
+	// 	txn_set.erase(tmp_node);
+	// } 
 	wkdb_time_table.release(get_thd_id(),get_txn_id());
 #endif
 #if CC_ALG == TICTOC
@@ -614,6 +628,14 @@ RC TxnManager::start_commit() {
 					// hlc_ts.update_with_cts(get_commit_timestamp());
 				}
 			}
+			if (CC_ALG == TCM) {
+				set_tcm_committed(true);
+				if (get_tcm_early() > get_tcm_late()) {
+					printf("txn id: %lu, early: %lu, late: %lu.\n", get_txn_id(), get_tcm_early(), get_tcm_late());
+				}
+				assert(get_tcm_early() <= get_tcm_late());
+				set_tcm_late(get_tcm_early());
+			}
 			uint64_t finish_start_time = get_sys_clock();
 			txn_stats.finish_start_time = finish_start_time;
 			// uint64_t prepare_timespan  = finish_start_time - txn_stats.prepare_start_time;
@@ -639,6 +661,14 @@ RC TxnManager::start_commit() {
 		}
 		if(CC_ALG == WSI) {
 			wsi_man.gene_finish_ts(this);
+		}
+		if (CC_ALG == TCM) {
+			set_tcm_committed(true);
+			if (get_tcm_early() > get_tcm_late()) {
+				printf("early: %lu, late: %lu.\n", get_tcm_early(), get_tcm_late());
+			}
+			assert(get_tcm_early() <= get_tcm_late());
+			set_tcm_late(get_tcm_early());
 		}
 		if(rc == RCOK)
 			rc = commit();
@@ -817,6 +847,38 @@ uint64_t TxnManager::decr_rsp(int i) {
 	return result;
 }
 
+uint64_t TxnManager::get_tcm_early() {
+  return txn->early;
+}
+
+void TxnManager::set_tcm_early(uint64_t early) {
+  txn->early = early;
+}
+
+uint64_t TxnManager::get_tcm_late() {
+  return txn->late;
+}
+
+void TxnManager::set_tcm_late(uint64_t late) {
+  txn->late = late;
+}
+
+bool TxnManager::get_tcm_end() {
+  return txn->end;
+}
+
+void TxnManager::set_tcm_end(bool end) {
+  txn->end = end;
+}
+
+bool TxnManager::get_tcm_committed() {
+  return txn->committed;
+}
+
+void TxnManager::set_tcm_committed(bool committed) {
+  txn->committed = committed;
+}
+
 void TxnManager::release_last_row_lock() {
 	assert(txn->row_cnt > 0);
 	row_t * orig_r = txn->accesses[txn->row_cnt-1]->orig_row;
@@ -893,6 +955,7 @@ void TxnManager::cleanup(RC rc) {
 #if (CC_ALG == WSI) && MODE == NORMAL_MODE
 	wsi_man.finish(rc,this);
 #endif
+	is_commit = rc != Abort;
 	ts_t starttime = get_sys_clock();
 	uint64_t row_cnt = txn->accesses.get_count();
 	assert(txn->accesses.get_count() == txn->row_cnt);

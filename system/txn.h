@@ -72,6 +72,13 @@ public:
 
 	uint64_t write_cnt;
 	uint64_t row_cnt;
+
+	// For TCM
+    uint64_t early;
+    uint64_t late;
+    bool end;
+    bool committed;
+    
 	// Internal state
 	TxnState twopc_state;
 	Array<row_t*> insert_rows;
@@ -180,10 +187,22 @@ public:
 	uint64_t        incr_lr();
 	uint64_t        decr_lr();
 
+	// For TCM 
+    uint64_t        get_tcm_early();
+    void            set_tcm_early(uint64_t early);
+    uint64_t        get_tcm_late();
+    void            set_tcm_late(uint64_t late);
+    bool            get_tcm_end();
+    void            set_tcm_end(bool end);
+    bool            get_tcm_committed();
+    void            set_tcm_committed(bool committed);
+
+	bool is_commit;
 	RC commit();
 	RC start_commit();
 	RC start_abort();
 	RC abort();
+	pthread_mutex_t *ts_interval_lock;
 
 	void release_locks(RC rc);
 	bool isRecon() {

@@ -59,6 +59,7 @@ class Row_tictoc;
 class Row_si;
 class Row_null;
 class Row_silo;
+class Row_tcm;
 
 class row_t {
 public:
@@ -126,9 +127,6 @@ public:
 	#elif CC_ALG == MAAT
 		Row_maat * manager;
 	#elif CC_ALG == WOOKONG
-		volatile uint64_t conflict_num;
-		volatile uint64_t conflict_level;
-		volatile uint64_t read_cnt;
 		Row_wkdb * manager;
 	#elif CC_ALG == TICTOC
 		Row_tictoc * manager;
@@ -146,9 +144,14 @@ public:
 		Row_wsi * manager;
 	#elif CC_ALG == CNULL
 		Row_null * manager;
-  #elif CC_ALG == SILO
-  	Row_silo * manager;
+  	#elif CC_ALG == SILO
+  		Row_silo * manager;
+	#elif CC_ALG == TCM
+		Row_tcm * manager;
 	#endif
+	volatile uint64_t conflict_num;
+	volatile uint64_t conflict_level;
+	volatile uint64_t read_cnt;
 	char * data;
 	int tuple_size;
 	table_t * table;

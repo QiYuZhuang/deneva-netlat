@@ -335,6 +335,15 @@ obj/row_ssi.o: concurrency_control/row_ssi.cpp system/txn.h system/global.h \
  system/logger.h system/array.h storage/row.h system/manager.h \
  concurrency_control/ssi.h concurrency_control/row_ssi.h \
  system/mem_alloc.h
+obj/row_tcm.o: concurrency_control/row_tcm.cpp storage/row.h system/global.h \
+ config.h statistics/stats.h statistics/../system/global.h \
+ statistics/stats_array.h system/pool.h system/global.h system/helper.h \
+ system/concurrentqueue.h system/txn_table.h system/logger.h \
+ system/sim_manager.h benchmarks/da_block_queue.h system/txn.h \
+ system/array.h system/mem_alloc.h transport/message.h system/helper.h \
+ system/logger.h system/array.h storage/table.h \
+ concurrency_control/row_tcm.h concurrency_control/row_lock.h \
+ system/mem_alloc.h system/manager.h
 obj/row_tictoc.o: concurrency_control/row_tictoc.cpp storage/row.h \
  system/global.h config.h statistics/stats.h \
  statistics/../system/global.h statistics/stats_array.h system/pool.h \
@@ -453,6 +462,7 @@ obj/row.o: storage/row.cpp system/global.h config.h statistics/stats.h \
  concurrency_control/row_ts.h concurrency_control/row_tictoc.h \
  concurrency_control/row_ssi.h concurrency_control/row_wsi.h \
  concurrency_control/row_null.h concurrency_control/row_silo.h \
+ concurrency_control/row_tcm.h concurrency_control/row_lock.h \
  system/manager.h
 obj/table.o: storage/table.cpp system/global.h config.h statistics/stats.h \
  statistics/../system/global.h statistics/stats_array.h system/pool.h \

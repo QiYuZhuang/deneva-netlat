@@ -408,6 +408,9 @@ uint64_t QueryMessage::get_size() {
 #if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA
   size += sizeof(ts);
 #endif
+#if CC_ALG == TCM 
+  size += (sizeof(early) + sizeof(late) + sizeof(end) + sizeof(committed));
+#endif
 #if CC_ALG == OCC || CC_ALG == FOCC || CC_ALG == BOCC || CC_ALG == SSI || CC_ALG == WSI || \
     CC_ALG == DLI_BASE || CC_ALG == DLI_OCC || CC_ALG == DLI_MVCC_OCC || \
     CC_ALG == DLI_DTA || CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3 || CC_ALG == DLI_MVCC
@@ -422,9 +425,17 @@ void QueryMessage::copy_from_txn(TxnManager * txn) {
   ts = txn->get_timestamp();
   assert(ts != 0);
 #endif
+
+#if CC_ALG == TCM 
+  early = txn->get_tcm_early();
+  late = txn->get_tcm_late();
+  end = txn->get_tcm_end();
+  committed = txn->get_tcm_end();
+#endif
 #if CC_ALG == OCC || CC_ALG == FOCC || CC_ALG == BOCC || CC_ALG == SSI || CC_ALG == WSI || \
     CC_ALG == DLI_BASE || CC_ALG == DLI_OCC || CC_ALG == DLI_MVCC_OCC || \
     CC_ALG == DLI_DTA || CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3 || CC_ALG == DLI_MVCC
+
   start_ts = txn->get_start_timestamp();
 #endif
 }
@@ -435,9 +446,17 @@ void QueryMessage::copy_to_txn(TxnManager * txn) {
   assert(ts != 0);
   txn->set_timestamp(ts);
 #endif
+
+#if CC_ALG == TCM 
+  txn->set_tcm_early(early);
+  txn->set_tcm_late(late);
+  txn->set_tcm_end(end);
+  txn->set_tcm_committed(committed);
+#endif
 #if CC_ALG == OCC || CC_ALG == FOCC || CC_ALG == BOCC || CC_ALG == SSI || CC_ALG == WSI || \
     CC_ALG == DLI_BASE || CC_ALG == DLI_OCC || CC_ALG == DLI_MVCC_OCC || \
     CC_ALG == DLI_DTA || CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3 || CC_ALG == DLI_MVCC
+
   txn->set_start_timestamp(start_ts);
 #endif
 }
@@ -450,9 +469,16 @@ void QueryMessage::copy_from_buf(char * buf) {
  COPY_VAL(ts,buf,ptr);
   assert(ts != 0);
 #endif
+#if CC_ALG == TCM 
+  COPY_VAL(early, buf, ptr);
+  COPY_VAL(late, buf, ptr);
+  COPY_VAL(end, buf, ptr);
+  COPY_VAL(committed, buf, ptr);
+#endif
 #if CC_ALG == OCC || CC_ALG == FOCC || CC_ALG == BOCC || CC_ALG == SSI || CC_ALG == WSI || \
     CC_ALG == DLI_BASE || CC_ALG == DLI_OCC || CC_ALG == DLI_MVCC_OCC || \
     CC_ALG == DLI_DTA || CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3 || CC_ALG == DLI_MVCC
+
  COPY_VAL(start_ts,buf,ptr);
 #endif
 }
@@ -465,9 +491,16 @@ void QueryMessage::copy_to_buf(char * buf) {
  COPY_BUF(buf,ts,ptr);
   assert(ts != 0);
 #endif
+#if CC_ALG == TCM 
+  COPY_BUF(buf, early, ptr);
+  COPY_BUF(buf, late, ptr);
+  COPY_BUF(buf, end, ptr);
+  COPY_BUF(buf, committed, ptr);
+#endif
 #if CC_ALG == OCC || CC_ALG == FOCC || CC_ALG == BOCC || CC_ALG == SSI || CC_ALG == WSI || \
     CC_ALG == DLI_BASE || CC_ALG == DLI_OCC || CC_ALG == DLI_MVCC_OCC || \
     CC_ALG == DLI_DTA || CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3 || CC_ALG == DLI_MVCC
+
  COPY_BUF(buf,start_ts,ptr);
 #endif
 }
