@@ -288,7 +288,7 @@ adjust_2:
     }
 
 final:
-    assert(txn->get_tcm_early() <= txn->get_tcm_late());
+    // assert(txn->get_tcm_early() <= txn->get_tcm_late());
     uint64_t curr_time = get_sys_clock();
     uint64_t timespan = curr_time - starttime;
     if (rc == WAIT && txn->twopl_wait_start == 0) {
@@ -517,9 +517,12 @@ RC Row_tcm::add_reader_entry_into_waiters(TxnManager *txn) {
             unlock_ts_interval(txn, en->txn);
             return Abort;
         }
-        // if (txn->get_tcm_early() > txn->get_tcm_late()) {
-        //     return Abort;
-        // }
+        pthread_mutex_lock(txn->ts_interval_lock);
+        if (txn->get_tcm_early() > txn->get_tcm_late()) {
+            pthread_mutex_unlock(txn->ts_interval_lock);
+            return Abort;
+        }
+        pthread_mutex_unlock(txn->ts_interval_lock);
         LIST_INSERT_AFTER(en, entry, waiters_tail);
     } else {
         // reader can insert into head
@@ -560,9 +563,12 @@ RC Row_tcm::add_writer_entry_into_waiters(TxnManager *txn) {
         }
         en = en->next;
     }
-    // if (txn->get_tcm_early() > txn->get_tcm_late()) {
-    //     return Abort;
-    // }
+    pthread_mutex_lock(txn->ts_interval_lock);
+    if (txn->get_tcm_early() > txn->get_tcm_late()) {
+        pthread_mutex_unlock(txn->ts_interval_lock);
+        return Abort;
+    }
+    pthread_mutex_unlock(txn->ts_interval_lock);
     LIST_PUT_TAIL(waiters_head, waiters_tail, entry);
     waiter_cnt ++;
     assert(rc == WAIT);

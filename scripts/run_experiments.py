@@ -32,6 +32,7 @@ merge_mode = False
 perfTime = 60
 fromtimelist=[]
 totimelist=[]
+cpu_usage_index=0
 
 if len(sys.argv) < 2:
      sys.exit("Usage: %s [-exec/-e/-noexec/-ne] [-c cluster] experiments\n \
@@ -71,7 +72,7 @@ for exp in exps:
     for e in experiments:
         cfgs = get_cfgs(fmt,e)
         if remote:
-            cfgs["TPORT_TYPE"], cfgs["TPORT_TYPE_IPC"], cfgs["TPORT_PORT"] = "tcp", "false", 11000
+            cfgs["TPORT_TYPE"], cfgs["TPORT_TYPE_IPC"], cfgs["TPORT_PORT"] = "tcp", "false", 7100
         output_f = get_outfile_name(cfgs, fmt)
         output_dir = output_f + "/"
         output_f += strnow
@@ -90,7 +91,7 @@ for exp in exps:
                 if not found_cfg:
                     f_cfg.write(line)
 
-        cmd = "make clean; make deps; make -j32"
+        cmd = "make clean; make deps; make -j16"
         print cmd
         os.system(cmd)
         if not execute:
@@ -117,7 +118,9 @@ for exp in exps:
                 else:
                     assert(False)
 
-                machines = machines_[:(cfgs["NODE_CNT"] + cfgs["CLIENT_NODE_CNT"])]
+                # machines = machines_[:(cfgs["NODE_CNT"]+1)]
+                machines = machines_[:(cfgs["NODE_CNT"]+cfgs["CLIENT_NODE_CNT"])]
+                # machines = machines_[:(cfgs["NODE_CNT"] * 2)]
                 with open("ifconfig.txt", 'w') as f_ifcfg:
                     for m in machines:
                         f_ifcfg.write(m + "\n")
@@ -134,35 +137,46 @@ for exp in exps:
                         cmd = 'scp {}/{} {}:/{}'.format(PATH, f, m, uname)
                     print cmd
                     os.system(cmd)
-
+                    # if cluster == 'istc':
+                    #     cmd = 'ssh {}.csail.mit.edu:/{}/'.format(PATH, f, m, uname)
+                    # elif cluster == 'vcloud':
+                    #     os.system('./scripts/kill.sh {}'.format(m))
+                    #     cmd = 'ssh {}/{} {}:/{}'.format(PATH, f, m, uname)
                 print("Deploying: {}".format(output_f))
                 os.chdir('./scripts')
                 if cluster == 'istc':
-                    cmd = './deploy.sh \'{}\' /{}/ {}'.format(' '.join(machines), uname, cfgs["NODE_CNT"])
+                    cmd = 'sh deploy.sh \'{}\' /{}/ {}'.format(' '.join(machines), uname, cfgs["NODE_CNT"])
                 elif cluster == 'vcloud':
-                    cmd = './vcloud_deploy.sh \'{}\' /{}/ {} {} {}'.format(' '.join(machines), uname, cfgs["NODE_CNT"], perfTime, uname2)
+                    cmd = 'sh vcloud_deploy.sh \'{}\' /{}/ {} {} {}'.format(' '.join(machines), uname, cfgs["NODE_CNT"], perfTime, uname2)
                 print cmd
                 fromtimelist.append(str(int(time.time())) + "000")
                 os.system(cmd)
                 totimelist.append(str(int(time.time())) + "000")
                 perfip = machines[0]
-                cmd = "scp getFlame.sh {}:/{}/".format(perfip, uname2)
+                cmd = "scp getFlame.sh {}:/{}/".format(perfip, uname)
                 print cmd
                 os.system(cmd)
-                cmd = 'ssh {}@{} "bash /{}/getFlame.sh"'.format(uname2, perfip, vcloud_uname)
+                cmd = 'ssh {} "bash /{}/getFlame.sh"'.format(perfip, uname)
                 print cmd
                 os.system(cmd)
-                cmd = "scp {}:/{}/perf.svg {}{}.svg".format(perfip, uname2, perf_dir, output_f)
+                cmd = "scp {}:/{}/perf.svg {}{}.svg".format(perfip, uname, perf_dir, output_f)
                 print cmd
                 os.system(cmd)
                 os.chdir('..')
+                cpu_usage_path=PATH + "/results/" + strnow + '/cpu_usage_' + str(cpu_usage_index)
+                # cpu_usage_avg_path = PATH + "/results/" + strnow + '/cpu_usage_avg'
+                os.mkdir(cpu_usage_path)
+                cpu_usage_index+=1
                 for m, n in zip(machines, range(len(machines))):
                     if cluster == 'istc':
                         cmd = 'scp {}.csail.mit.edu:/{}/results.out {}{}_{}.out'.format(m,uname,result_dir,n,output_f)
                         print cmd
                         os.system(cmd)
                     elif cluster == 'vcloud':
-                        cmd = 'scp {}:/{}/dbresults.out results/{}/{}_{}.out'.format(m,uname,strnow,n,output_f)
+                        cmd = 'scp {}:/{}/dbresults{}.out results/{}/{}_{}.out'.format(m,uname,n,strnow,n,output_f)
+                        print cmd
+                        os.system(cmd)
+                        cmd = 'scp {}:/tmp/{}* {}/'.format(m,uname2,cpu_usage_path)
                         print cmd
                         os.system(cmd)
 
@@ -173,9 +187,9 @@ for exp in exps:
                 print("Deploying: {}".format(output_f))
                 for n in range(nnodes+nclnodes):
                     if n < nnodes:
-                        cmd = "./rundb -nid{}".format(n)
+                        cmd = "sh rundb -nid{}".format(n)
                     else:
-                        cmd = "./runcl -nid{}".format(n)
+                        cmd = "sh runcl -nid{}".format(n)
                     print(cmd)
                     cmd = shlex.split(cmd)
                     ofile_n = "{}{}_{}.out".format(result_dir,n,output_f)
@@ -190,6 +204,15 @@ for exp in exps:
         al.append(e[2])
     al = sorted(list(set(al)))
 
+    tcnt = []
+    for e in experiments:
+        tcnt.append(e[-2])
+    tcnt = sorted(list(set(tcnt)))
+
+    cocnt = []
+    for e in experiments:
+        cocnt.append(e[-1])
+    cocnt = sorted(list(set(cocnt)))
     sk = []
     for e in experiments:
         sk.append(e[-2])
@@ -197,7 +220,7 @@ for exp in exps:
 
     wr = []
     for e in experiments:
-        wr.append(e[-4])
+        wr.append(e[-5])
     wr = sorted(list(set(wr)))
 
     cn = []
@@ -209,6 +232,11 @@ for exp in exps:
     for e in experiments:
         ld.append(e[-3])
     ld = sorted(list(set(ld)))
+
+    part = []
+    for e in experiments:
+        part.append(e[4])
+    part = sorted(list(set(part)))
 
     tpcc_ld = []
     for e in experiments:
@@ -222,20 +250,40 @@ for exp in exps:
 
     cmd = ''
     os.chdir('./scripts')
-    if exp == 'ycsb_skew':
-        cmd = './result.sh -a ycsb_skew -n {} -c {} -s {} -t {}'.format(str(cn[0]), ','.join([str(x) for x in al]), ','.join([str(x) for x in sk]), strnow)
+    if exp == 'ycsb_skew' or exp == 'ycsb_skew1':
+        cmd = 'sh result.sh -a ycsb_skew -n {} -c {} -s {} -t {}'.format(str(cn[0]), ','.join([str(x) for x in al]), ','.join([str(x) for x in sk]), strnow)
     elif exp == 'ycsb_writes':
-        cmd='./result.sh -a ycsb_writes -n {} -c {} --wr {} -t {}'.format(cn[0], ','.join([str(x) for x in al]), ','.join([str(x) for x in wr]), strnow)
+        cmd='sh result.sh -a ycsb_writes -n {} -c {} --wr {} -t {}'.format(cn[0], ','.join([str(x) for x in al]), ','.join([str(x) for x in wr]), strnow)
     elif 'ycsb_scaling' in exp:
-        cmd='./result.sh -a ycsb_scaling -n {} -c {} -t {} --ft {} --tt {}'.format(','.join([str(x) for x in cn]), ','.join([str(x) for x in al]), strnow, ','.join(fromtimelist), ','.join(totimelist))
+        cmd='sh result.sh -a ycsb_scaling -n {} -c {} -t {} --ft {} --tt {}'.format(','.join([str(x) for x in cn]), ','.join([str(x) for x in al]), strnow, ','.join(fromtimelist), ','.join(totimelist))
+    elif 'ycsb_scaling_tcp' in exp:
+        cmd='sh result.sh -a ycsb_scaling_tcp -n {} -c {} -t {} --ft {} --tt {}'.format(','.join([str(x) for x in cn]), ','.join([str(x) for x in al]), strnow, ','.join(fromtimelist), ','.join(totimelist))
+    elif 'ycsb_scaling_two_sided' in exp:
+        cmd='sh result.sh -a ycsb_scaling_two_sided -n {} -c {} -t {} --ft {} --tt {}'.format(','.join([str(x) for x in cn]), ','.join([str(x) for x in al]), strnow, ','.join(fromtimelist), ','.join(totimelist))
+    elif 'ycsb_scaling_one_sided' in exp:
+        cmd='sh result.sh -a ycsb_scaling_one_sided -n {} -c {} -t {} --ft {} --tt {}'.format(','.join([str(x) for x in cn]), ','.join([str(x) for x in al]), strnow, ','.join(fromtimelist), ','.join(totimelist))
+    elif 'ycsb_scaling_coroutine' in exp:
+        cmd='sh result.sh -a ycsb_scaling_coroutine -n {} -c {} -t {} --ft {} --tt {}'.format(','.join([str(x) for x in cn]), ','.join([str(x) for x in al]), strnow, ','.join(fromtimelist), ','.join(totimelist))
+    elif 'ycsb_scaling_dbpa' in exp:
+        cmd='sh result.sh -a ycsb_scaling_dbpa -n {} -c {} -t {} --ft {} --tt {}'.format(','.join([str(x) for x in cn]), ','.join([str(x) for x in al]), strnow, ','.join(fromtimelist), ','.join(totimelist))
+    elif 'ycsb_scaling_all' in exp:
+        cmd='sh result.sh -a ycsb_scaling_all -n {} -c {} -t {} --ft {} --tt {}'.format(','.join([str(x) for x in cn]), ','.join([str(x) for x in al]), strnow, ','.join(fromtimelist), ','.join(totimelist))
     elif 'tpcc_scaling' in exp:
-        cmd='./result.sh -a tpcc_scaling -n {} -c {} -t {}'.format(','.join([str(x) for x in cn]), ','.join([str(x) for x in al]), strnow)
+        cmd='sh result.sh -a tpcc_scaling -n {} -c {} -t {}'.format(','.join([str(x) for x in cn]), ','.join([str(x) for x in al]), strnow)
     elif 'ycsb_stress' in exp:
-        cmd='./result.sh -a ycsb_stress -n {} -c {} -s {} -l {} -t {}'.format(str(cn[0]), ','.join([str(x) for x in al]), str(sk[0]), ','.join([str(x) for x in ld]), strnow)
+        cmd='sh result.sh -a ycsb_stress -n {} -c {} -s {} -l {} -t {}'.format(str(cn[0]), ','.join([str(x) for x in al]), str(sk[0]), ','.join([str(x) for x in ld]), strnow)
     elif 'tpcc_stress' in exp:
-        cmd='./result.sh -a tpcc_stress -n {} -c {} -l {} -t {}'.format(str(cn[0]), ','.join([str(x) for x in al]), ','.join([str(x) for x in tpcc_ld]), strnow)
+        cmd='sh result.sh -a tpcc_stress -n {} -c {} -l {} -t {}'.format(str(cn[0]), ','.join([str(x) for x in al]), ','.join([str(x) for x in tpcc_ld]), strnow)
     elif 'tpcc_cstress' in exp:
-        cmd='./result.sh -a tpcc_stress_ctx -n {} -c {} -l {} -C {} -t {} --ft {} --tt {}'.format(str(cn[0]), ','.join([str(x) for x in al]), ','.join([str(x) for x in ld]), ','.join([str(x) for x in ccnt]), strnow, ','.join(fromtimelist), ','.join(totimelist))
+        cmd='sh result.sh -a tpcc_stress_ctx -n {} -c {} -l {} -C {} -t {} --ft {} --tt {}'.format(str(cn[0]), ','.join([str(x) for x in al]), ','.join([str(x) for x in ld]), ','.join([str(x) for x in ccnt]), strnow, ','.join(fromtimelist), ','.join(totimelist))
+    elif 'ycsb_thread' in exp:
+        cmd='sh result.sh -a ycsb_thread -n {} -c {} -t {} -T {}'.format(str(cn[0]), ','.join([str(x) for x in al]), strnow, ','.join([str(x) for x in tcnt]))
+    elif 'tpcc_thread' in exp:
+        cmd='sh result.sh -a tpcc_thread -n {} -c {} -t {} -T {}'.format(str(cn[0]), ','.join([str(x) for x in al]), strnow, ','.join([str(x) for x in tcnt]))
+    elif 'ycsb_partitions' in exp:
+        cmd='sh result.sh -a ycsb_partitions -n {} -c {} -t {} -P {}'.format(str(cn[0]), ','.join([str(x) for x in al]), strnow, ','.join([str(x) for x in part]))
+    elif 'ycsb_coroutine' in exp:
+        cmd='sh result.sh -a ycsb_coroutine -n {} -c {} -t {} -CO {}'.format(str(cn[0]), ','.join([str(x) for x in al]), strnow, ','.join([str(x) for x in cocnt]))
     print cmd
     os.system(cmd)
     print cmd
