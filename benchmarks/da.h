@@ -48,6 +48,7 @@ class DATxnManager : public TxnManager {
   RC run_txn();
   RC run_txn_post_wait();
   RC run_calvin_txn();
+  bool is_done() override { return true; };
 
   void copy_remote_items(DAQueryMessage* msg);
 
@@ -58,7 +59,6 @@ class DATxnManager : public TxnManager {
 
   uint64_t next_item_id;
 
-  bool is_done();
   bool is_local_item(uint64_t idx);
   RC send_remote_request() {return RCOK;}
   RC run_delivery(DAQuery* query);

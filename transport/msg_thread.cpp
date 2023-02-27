@@ -113,7 +113,7 @@ static uint64_t mget_size() {
 
 uint64_t cget_size(QueryMessage * msg) {
   uint64_t size = mget_size();
-#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA
+#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA || CC_ALG == DNCC
   size += sizeof(msg->ts);
 #endif
 #if CC_ALG == OCC || CC_ALG == FOCC || CC_ALG == BOCC || CC_ALG == SSI || CC_ALG == WSI || \
@@ -153,7 +153,7 @@ void fake_copy_to_buf(Message * msg, char* buf) {
     // !copy_to_buf
     ptr = mget_size();
     QueryMessage* cmsg = (QueryMessage*) msg;
-    #if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA
+    #if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA || CC_ALG == DNCC
     COPY_BUF(buf,cmsg->ts,ptr);
       assert(ts != 0);
     #endif
@@ -217,7 +217,7 @@ Message* fake_create_message(char * buf) {
     // !QueryMessage::copy_from_buf(txn);
     ptr = mget_size();
     QueryMessage* cmsg = (QueryMessage*) msg;
-    #if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA
+    #if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA || CC_ALG == DNCC
     COPY_VAL(cmsg->ts,buf,ptr);
       assert(cmsg->ts != 0);
     #endif

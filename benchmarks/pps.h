@@ -121,6 +121,7 @@ public:
   RC run_pps_phase5();
 	PPSRemTxnType state;
   void copy_remote_items(PPSQueryMessage * msg);
+  bool is_done() override;
 private:
 	PPSWorkload * _wl;
 	volatile RC _rc;
@@ -130,7 +131,7 @@ private:
 
   void next_pps_state();
   RC run_txn_state();
-  bool is_done();
+  
   bool is_local_item(uint64_t idx);
   RC send_remote_request();
 

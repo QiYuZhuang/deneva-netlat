@@ -383,7 +383,12 @@ void TxnManager::init(uint64_t thd_id, Workload * h_wl) {
 	is_commit = false;
 	ts_interval_lock = new pthread_mutex_t;
 	pthread_mutex_init(ts_interval_lock, NULL);
-
+	subtxn_lock = new pthread_mutex_t;
+	pthread_mutex_init(subtxn_lock, NULL);
+	wr_lock = new pthread_mutex_t;
+	pthread_mutex_init(wr_lock, NULL);
+	txn_state = 0;
+	finish_read_write = false;
 	txn_stats.init();
 }
 
@@ -400,7 +405,7 @@ void TxnManager::reset() {
 	aborted = false;
 	return_id = UINT64_MAX;
 	twopl_wait_start = 0;
-
+	txn_state = 0;
 	//ready = true;
 
 	// MaaT & DTA & WKDB
@@ -422,7 +427,7 @@ void TxnManager::reset() {
 	assert(txn);
 	assert(query);
 	txn->reset(get_thd_id());
-
+	finish_read_write = false;
 	// Stats
 	txn_stats.reset();
 }
@@ -608,6 +613,7 @@ RC TxnManager::start_commit() {
 	RC rc = RCOK;
 	DEBUG("%ld start_commit RO?%d\n",get_txn_id(),query->readonly());
 	if(is_multi_part()) {
+		// printf("multi part %ld start_commit RO?%d\n",get_txn_id(),query->readonly());
 		if(CC_ALG == TICTOC) {
 			rc = validate();
 			if (rc != Abort) {
@@ -615,6 +621,14 @@ RC TxnManager::start_commit() {
 				send_prepare_messages();
 				rc = WAIT_REM;
 			}
+		} else if (CC_ALG == DNCC){
+			uint64_t finish_start_time = get_sys_clock();
+			txn_stats.finish_start_time = finish_start_time;
+			txn_stats.trans_commit_network_start_time = get_sys_clock();
+			send_finish_messages();
+			txn_state = 2;
+			rsp_cnt = 0;
+			rc = commit();
 		} else if (!query->readonly() || CC_ALG == OCC || CC_ALG == MAAT || CC_ALG == DLI_BASE ||
 				CC_ALG == DLI_OCC || CC_ALG == SILO || CC_ALG == BOCC || CC_ALG == SSI) {
 			// send prepare messages
@@ -646,10 +660,12 @@ RC TxnManager::start_commit() {
 			}
 			txn_stats.trans_commit_network_start_time = get_sys_clock();
 			send_finish_messages();
+			txn_state = 2;
 			rsp_cnt = 0;
 			rc = commit();
 		}
 	} else { // is not multi-part
+	// printf("single part %ld start_commit RO?%d\n",get_txn_id(),query->readonly());
 		rc = validate();
 		uint64_t finish_start_time = get_sys_clock();
 		txn_stats.finish_start_time = finish_start_time;
@@ -694,6 +710,7 @@ void TxnManager::send_prepare_messages() {
 	if(GET_NODE_ID(query->partitions_touched[i]) == g_node_id) {
 		continue;
 	}
+		assert(is_done());
 		msg_queue.enqueue(get_thd_id(), Message::create_message(this, RPREPARE),
 											GET_NODE_ID(query->partitions_touched[i]));
 	}
@@ -707,13 +724,18 @@ void TxnManager::send_finish_messages() {
 		if(GET_NODE_ID(query->partitions_touched[i]) == g_node_id) {
 			continue;
     }
+		if (this->txn->rc == RCOK)
+			assert(is_done());
 		msg_queue.enqueue(get_thd_id(), Message::create_message(this, RFIN),
 											GET_NODE_ID(query->partitions_touched[i]));
 	}
 }
 
 int TxnManager::received_response(RC rc) {
-	assert(txn->rc == RCOK || txn->rc == Abort);
+	if (rc != RCOK && rc != Abort) {
+		printf("txn_id: %lu, response's result: %d.\n", get_txn_id(), rc);
+	}
+	assert(txn->rc == RCOK || txn->rc == Abort || txn->rc == WAIT);
 	if (txn->rc == RCOK) txn->rc = rc;
 #if CC_ALG == CALVIN
 	++rsp_cnt;
@@ -909,13 +931,14 @@ void TxnManager::cleanup_row(RC rc, uint64_t rid) {
 			version = orig_r->return_row(rc, type, this, txn->accesses[rid]->data);
 		}
 #else
+		assert(this != nullptr);
 		version = orig_r->return_row(rc, type, this, txn->accesses[rid]->data);
 #endif
 	}
 #endif
 
 #if ROLL_BACK && \
-		(CC_ALG == NO_WAIT || CC_ALG == WAIT_DIE || CC_ALG == HSTORE || CC_ALG == HSTORE_SPEC)
+		(CC_ALG == NO_WAIT || CC_ALG == WAIT_DIE || CC_ALG == DNCC || CC_ALG == HSTORE || CC_ALG == HSTORE_SPEC)
 	if (type == WR) {
 		//printf("free 10 %ld\n",get_txn_id());
 				txn->accesses[rid]->orig_data->free_row();
@@ -1093,7 +1116,7 @@ RC TxnManager::get_row(row_t * row, access_t type, row_t *& row_rtn) {
 #endif
 
 #if ROLL_BACK && (CC_ALG == DL_DETECT || CC_ALG == NO_WAIT || CC_ALG == WAIT_DIE || \
-									CC_ALG == HSTORE || CC_ALG == HSTORE_SPEC)
+									CC_ALG == DNCC || CC_ALG == HSTORE || CC_ALG == HSTORE_SPEC)
 	if (type == WR) {
 	//printf("alloc 10 %ld\n",get_txn_id());
 	uint64_t part_id = row->get_part_id();
@@ -1156,7 +1179,7 @@ RC TxnManager::get_row_post_wait(row_t *& row_rtn) {
 
 	access->type = type;
 	access->orig_row = row;
-#if ROLL_BACK && (CC_ALG == DL_DETECT || CC_ALG == NO_WAIT || CC_ALG == WAIT_DIE)
+#if ROLL_BACK && (CC_ALG == DL_DETECT || CC_ALG == NO_WAIT || CC_ALG == WAIT_DIE || CC_ALG == DNCC)
 	if (type == WR) {
 		uint64_t part_id = row->get_part_id();
 	//printf("alloc 10 %ld\n",get_txn_id());

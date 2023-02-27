@@ -28,6 +28,7 @@
 #include "transport.h"
 #include "msg_queue.h"
 #include "message.h"
+#include <unordered_set>
 
 void TPCCTxnManager::init(uint64_t thd_id, Workload * h_wl) {
 	TxnManager::init(thd_id, h_wl);
@@ -43,6 +44,9 @@ void TPCCTxnManager::reset() {
 		state = TPCC_PAYMENT0;
 	} else if (tpcc_query->txn_type == TPCC_NEW_ORDER) {
 		state = TPCC_NEWORDER0;
+	}
+	for(uint32_t i = 0; i < g_node_cnt; i++) {
+		remote_node[i].clear();
 	}
 	next_item_id = 0;
 	TxnManager::reset();
@@ -79,6 +83,9 @@ RC TPCCTxnManager::run_txn() {
 		query->print();
 #endif
 		query->partitions_touched.add_unique(GET_PART_ID(0,g_node_id));
+		#if PARAL_SUBTXN
+			rc = send_remote_subtxn();
+		#endif
 	}
 
 
@@ -89,6 +96,12 @@ RC TPCCTxnManager::run_txn() {
 	uint64_t curr_time = get_sys_clock();
 	txn_stats.process_time += curr_time - starttime;
 	txn_stats.process_time_short += curr_time - starttime;
+
+	if (rc != Abort) {
+		if(rsp_cnt > 0) {
+			return WAIT;
+		}
+	}
 
 	if(IS_LOCAL(get_txn_id())) {
 		if(is_done() && rc == RCOK)
@@ -320,6 +333,63 @@ bool TPCCTxnManager::is_local_item(uint64_t idx) {
 	return GET_NODE_ID(part_id_ol_supply_w) == g_node_id;
 }
 
+RC TPCCTxnManager::generate_center_master(uint64_t w_id, access_t type) {
+	vector<uint64_t> node_id;
+	TPCCQuery* tpcc_query = (TPCCQuery*) query;
+#if USE_REPLICA
+	if (type == WR) {
+		node_id.push_back(GET_NODE_ID(wh_to_part(w_id)));
+		node_id.push_back(GET_FOLLOWER1_NODE(wh_to_part(w_id)));
+		node_id.push_back(GET_FOLLOWER2_NODE(wh_to_part(w_id)));
+	} else {
+		node_id.push_back(GET_NODE_ID(wh_to_part(w_id)));
+	}
+#else
+	node_id.push_back(GET_NODE_ID(wh_to_part(w_id)));
+#endif
+
+	uint64_t n_id = GET_NODE_ID(wh_to_part(w_id));
+	remote_node[n_id].push_back(1);
+	tpcc_query->partitions_touched.add_unique(GET_PART_ID(0,n_id));
+	if(type == WR) tpcc_query->partitions_modified.add_unique(wh_to_part(w_id));
+	return RCOK;
+}
+
+RC TPCCTxnManager::send_remote_subtxn() {
+	assert(IS_LOCAL(get_txn_id()));
+	TPCCQuery* tpcc_query = (TPCCQuery*) query;
+	RC rc = RCOK;
+	unordered_set<uint64_t> node_id;
+	// 
+	uint64_t w_id = tpcc_query->w_id;
+	generate_center_master(w_id, WR);
+
+	// for payment
+	uint64_t d_w_id = tpcc_query->d_w_id;
+	uint64_t c_w_id = tpcc_query->c_w_id;
+	if (tpcc_query->txn_type == TPCC_PAYMENT) {
+		generate_center_master(d_w_id, WR);
+		generate_center_master(c_w_id, WR);
+	}
+	// for neworder
+	if (tpcc_query->txn_type == TPCC_NEW_ORDER) {
+		for(uint64_t i = 0; i < tpcc_query->ol_cnt; i++) {
+			uint64_t ol_number = i;
+			uint64_t ol_supply_w_id = tpcc_query->items[ol_number]->ol_supply_w_id;
+			generate_center_master(ol_supply_w_id, WR);
+		}
+	}
+	rsp_cnt = query->partitions_touched.size() - 1;
+	// DEBUG("txn %d partitions_touched %d\n", get_txn_id(),query->partitions_touched.size());
+	for(size_t i = 0; i < g_node_cnt; i++) {
+		if(i != g_node_id && remote_node[i].size() > 0) {//send message to all masters
+			// printf("%d \n",remote_node[i].size());
+			msg_queue.enqueue(get_thd_id(),Message::create_message(this,RQRY),i);
+			// DEBUG("txn %d send subtxn to %d\n", get_txn_id(),i);
+		}
+	}
+	return rc;
+}
 
 RC TPCCTxnManager::send_remote_request() {
 	assert(IS_LOCAL(get_txn_id()));
@@ -413,9 +483,13 @@ RC TPCCTxnManager::run_txn_state() {
 	switch (state) {
 		case TPCC_PAYMENT0 :
 						if(w_loc)
-										rc = run_payment_0(w_id, d_id, d_w_id, h_amount, row);
+							rc = run_payment_0(w_id, d_id, d_w_id, h_amount, row);
 						else {
-							rc = send_remote_request();
+							#if PARAL_SUBTXN == true
+								rc = RCOK;
+							#else
+								rc = send_remote_request();
+							#endif
 						}
 						break;
 		case TPCC_PAYMENT1 :
@@ -431,7 +505,11 @@ RC TPCCTxnManager::run_txn_state() {
 						if(c_w_loc)
 								rc = run_payment_4( w_id,  d_id, c_id, c_w_id,  c_d_id, c_last, h_amount, by_last_name, row);
 						else {
+							#if PARAL_SUBTXN == true
+								rc = RCOK;
+							#else
 								rc = send_remote_request();
+							#endif
 						}
 						break;
 		case TPCC_PAYMENT5 :
@@ -441,7 +519,11 @@ RC TPCCTxnManager::run_txn_state() {
 						if(w_loc)
 								rc = new_order_0( w_id, d_id, c_id, remote, ol_cnt, o_entry_d, &tpcc_query->o_id, row);
 						else {
+							#if PARAL_SUBTXN == true
+								rc = RCOK;
+							#else
 								rc = send_remote_request();
+							#endif
 						}
 			break;
 		case TPCC_NEWORDER1 :
@@ -470,7 +552,11 @@ RC TPCCTxnManager::run_txn_state() {
 				rc = new_order_8(w_id, d_id, remote, ol_i_id, ol_supply_w_id, ol_quantity, ol_number, o_id,
 												 row);
 			} else {
-									rc = send_remote_request();
+						#if PARAL_SUBTXN == true
+							rc = RCOK;
+						#else
+							rc = send_remote_request();
+						#endif
 					}
 							break;
 		case TPCC_NEWORDER9 :

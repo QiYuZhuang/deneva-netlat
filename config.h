@@ -65,17 +65,17 @@
 /***********************************************/
 // Simulation + Hardware
 /***********************************************/
-#define NODE_CNT 28
+#define NODE_CNT 4
 #define THREAD_CNT 4
-#define REM_THREAD_CNT 2
-#define SEND_THREAD_CNT 2
+#define REM_THREAD_CNT 1
+#define SEND_THREAD_CNT 4
 #define CORE_CNT 2
 // PART_CNT should be at least NODE_CNT
 #define PART_CNT NODE_CNT
-#define CLIENT_NODE_CNT 8
+#define CLIENT_NODE_CNT NODE_CNT
 #define CLIENT_THREAD_CNT 4
-#define CLIENT_REM_THREAD_CNT 2
-#define CLIENT_SEND_THREAD_CNT 2
+#define CLIENT_REM_THREAD_CNT 1
+#define CLIENT_SEND_THREAD_CNT 1
 #define CLIENT_RUNTIME false
 
 #define LOAD_METHOD LOAD_MAX
@@ -85,7 +85,7 @@
 #define REPLICA_CNT 0
 // AA (Active-Active), AP (Active-Passive)
 #define REPL_TYPE AP
-
+#define PARAL_SUBTXN true
 // each transaction only accesses only 1 virtual partition. But the lock/ts manager and index are
 // not aware of such partitioning. VIRTUAL_PART_CNT describes the request distribution and is only
 // used to generate queries. For HSTORE, VIRTUAL_PART_CNT should be the same as PART_CNT.
@@ -159,7 +159,7 @@
 
 // WAIT_DIE, NO_WAIT, TIMESTAMP, MVCC, CALVIN, MAAT, WOOKONG, TICTOC, SI
 #define ISOLATION_LEVEL SERIALIZABLE
-#define CC_ALG MAAT
+#define CC_ALG WAIT_DIE
 #define YCSB_ABORT_MODE false
 #define QUEUE_CAPACITY_NEW 1000000
 // all transactions acquire tuples according to the primary key order.
@@ -234,15 +234,15 @@
 #define DATA_PERC 100
 #define ACCESS_PERC 0.03
 #define INIT_PARALLELISM 8
-#define SYNTH_TABLE_SIZE 469762048
-#define ZIPF_THETA 0.6
+#define SYNTH_TABLE_SIZE 67108864
+#define ZIPF_THETA 0.5
 #define TXN_WRITE_PERC 0.5
-#define TUP_WRITE_PERC 0.5
+#define TUP_WRITE_PERC 1
 #define SCAN_PERC           0
 #define SCAN_LEN          20
 #define PART_PER_TXN 2
 #define PERC_MULTI_PART     MPR
-#define REQ_PER_QUERY 10
+#define REQ_PER_QUERY 5
 #define FIELD_PER_TUPLE       10
 #define CREATE_TXN_FILE false
 #define STRICT_PPT 0
@@ -262,7 +262,7 @@
 #define WH_UPDATE         true
 #define NUM_WH PART_CNT
 // % of transactions that access multiple partitions
-#define MPR 1.0
+#define MPR 0.5
 #define MPIR 0.01
 #define MPR_NEWORDER      20 // In %
 enum TPCCTable {
@@ -405,6 +405,7 @@ enum PPSTxnType {
 #define SILO 27
 #define CNULL 28
 #define TCM         29
+#define DNCC 30
 // TIMESTAMP allocation method.
 #define TS_MUTEX          1
 #define TS_CAS            2

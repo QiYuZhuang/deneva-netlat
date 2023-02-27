@@ -82,6 +82,7 @@ Message * Message::create_message(TxnManager * txn, RemReqType rtype) {
  msg->copy_from_txn(txn);
 
  // copy latency here
+ msg->current_abort_cnt = txn->abort_cnt;
  msg->lat_work_queue_time = txn->txn_stats.work_queue_time_short;
  msg->lat_msg_queue_time = txn->txn_stats.msg_queue_time_short;
  msg->lat_cc_block_time = txn->txn_stats.cc_block_time_short;
@@ -207,6 +208,7 @@ Message * Message::create_message(RemReqType rtype) {
   msg->mq_time = 0;
   msg->ntwk_time = 0;
 
+  msg->current_abort_cnt = 0;
   msg->lat_work_queue_time = 0;
   msg->lat_msg_queue_time = 0;
   msg->lat_cc_block_time = 0;
@@ -231,6 +233,9 @@ uint64_t Message::mget_size() {
 
   // for stats, latency
   size += sizeof(uint64_t) * 7;
+
+  // for current_abort_cnt
+  size += sizeof(uint64_t);
   return size;
 }
 
@@ -253,6 +258,7 @@ void Message::mcopy_from_buf(char * buf) {
 #endif
   COPY_VAL(mq_time,buf,ptr);
 
+  COPY_VAL(current_abort_cnt,buf,ptr);
   COPY_VAL(lat_work_queue_time,buf,ptr);
   COPY_VAL(lat_msg_queue_time,buf,ptr);
   COPY_VAL(lat_cc_block_time,buf,ptr);
@@ -278,6 +284,7 @@ void Message::mcopy_to_buf(char * buf) {
 #endif
   COPY_BUF(buf,mq_time,ptr);
 
+  COPY_BUF(buf,current_abort_cnt,ptr);
   COPY_BUF(buf,lat_work_queue_time,ptr);
   COPY_BUF(buf,lat_msg_queue_time,ptr);
   COPY_BUF(buf,lat_cc_block_time,ptr);
@@ -405,7 +412,7 @@ void Message::release_message(Message * msg) {
 
 uint64_t QueryMessage::get_size() {
   uint64_t size = Message::mget_size();
-#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA
+#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA || CC_ALG == DNCC
   size += sizeof(ts);
 #endif
 #if CC_ALG == TCM 
@@ -421,7 +428,7 @@ uint64_t QueryMessage::get_size() {
 
 void QueryMessage::copy_from_txn(TxnManager * txn) {
   Message::mcopy_from_txn(txn);
-#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA
+#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA || CC_ALG == DNCC
   ts = txn->get_timestamp();
   assert(ts != 0);
 #endif
@@ -442,7 +449,7 @@ void QueryMessage::copy_from_txn(TxnManager * txn) {
 
 void QueryMessage::copy_to_txn(TxnManager * txn) {
   Message::mcopy_to_txn(txn);
-#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA
+#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA || CC_ALG == DNCC
   assert(ts != 0);
   txn->set_timestamp(ts);
 #endif
@@ -465,7 +472,7 @@ void QueryMessage::copy_from_buf(char * buf) {
   Message::mcopy_from_buf(buf);
   uint64_t ptr __attribute__ ((unused));
   ptr = Message::mget_size();
-#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA
+#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA || CC_ALG == DNCC
  COPY_VAL(ts,buf,ptr);
   assert(ts != 0);
 #endif
@@ -487,7 +494,7 @@ void QueryMessage::copy_to_buf(char * buf) {
   Message::mcopy_to_buf(buf);
   uint64_t ptr __attribute__ ((unused));
   ptr = Message::mget_size();
-#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA
+#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA || CC_ALG == DNCC
  COPY_BUF(buf,ts,ptr);
   assert(ts != 0);
 #endif

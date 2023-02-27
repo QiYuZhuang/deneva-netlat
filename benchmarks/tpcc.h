@@ -131,6 +131,7 @@ public:
   RC run_tpcc_phase5();
 	TPCCRemTxnType state;
   void copy_remote_items(TPCCQueryMessage * msg);
+  bool is_done() override;
 private:
 	TPCCWorkload * _wl;
 	volatile RC _rc;
@@ -138,11 +139,12 @@ private:
 
   uint64_t next_item_id;
 
-void next_tpcc_state();
-RC run_txn_state();
-  bool is_done();
+  void next_tpcc_state();
+  RC run_txn_state();
   bool is_local_item(uint64_t idx);
   RC send_remote_request();
+  RC send_remote_subtxn();
+  RC generate_center_master(uint64_t w_id, access_t type);
 
   RC run_payment_0(uint64_t w_id, uint64_t d_id, uint64_t d_w_id, double h_amount,
                    row_t*& r_wh_local);
@@ -179,6 +181,8 @@ RC run_txn_state();
 	RC run_order_status(TPCCQuery * query);
 	RC run_delivery(TPCCQuery * query);
 	RC run_stock_level(TPCCQuery * query);
+
+  vector<vector<uint64_t>> remote_node{g_node_cnt};
 };
 
 #endif

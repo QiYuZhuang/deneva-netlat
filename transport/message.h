@@ -53,6 +53,7 @@ public:
   uint64_t send_time;
 
   // Collect other stats
+  uint64_t current_abort_cnt;
   double lat_work_queue_time;
   double lat_msg_queue_time;
   double lat_cc_block_time;
@@ -383,7 +384,7 @@ public:
   void release() {}
 
   uint64_t pid;
-#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == DTA || CC_ALG == WOOKONG
+#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == DTA || CC_ALG == WOOKONG || CC_ALG == DNCC
   uint64_t ts;
 #endif
 #if CC_ALG == TCM

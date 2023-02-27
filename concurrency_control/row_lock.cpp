@@ -49,7 +49,7 @@ RC Row_lock::lock_get(lock_t type, TxnManager * txn) {
 }
 
 RC Row_lock::lock_get(lock_t type, TxnManager * txn, uint64_t* &txnids, int &txncnt) {
-    assert (CC_ALG == NO_WAIT || CC_ALG == WAIT_DIE || CC_ALG == CALVIN);
+    assert (CC_ALG == NO_WAIT || CC_ALG == WAIT_DIE || CC_ALG == CALVIN || CC_ALG == DNCC);
     RC rc;
     uint64_t starttime = get_sys_clock();
     uint64_t lock_get_start_time = starttime;
@@ -68,7 +68,7 @@ RC Row_lock::lock_get(lock_t type, TxnManager * txn, uint64_t* &txnids, int &txn
 #if TWOPL_LITE
 	  conflict = owner_cnt > 0;
 #endif
-	if (CC_ALG == WAIT_DIE && !conflict) {
+	if ((CC_ALG == WAIT_DIE || CC_ALG == DNCC)&& !conflict) {
 		if (waiters_head && txn->get_timestamp() < waiters_head->txn->get_timestamp()) {
 			conflict = true;
 		}
@@ -80,13 +80,13 @@ RC Row_lock::lock_get(lock_t type, TxnManager * txn, uint64_t* &txnids, int &txn
     if (conflict) {
     //printf("conflict! rid%ld txnid%ld ",_row->get_primary_key(),txn->get_txn_id());
         // Cannot be added to the owner list.
-        if (CC_ALG == NO_WAIT) {
+        if (CC_ALG == NO_WAIT || txn->is_dncc) {
             rc = Abort;
       DEBUG("abort %ld,%ld %ld %lx\n", txn->get_txn_id(), txn->get_batch_id(),
             _row->get_primary_key(), (uint64_t)_row);
       //printf("abort %ld %ld %lx\n",txn->get_txn_id(),_row->get_primary_key(),(uint64_t)_row);
             goto final;
-        } else if (CC_ALG == WAIT_DIE) {
+        } else if (CC_ALG == WAIT_DIE || CC_ALG == DNCC) {
             ///////////////////////////////////////////////////////////
             //  - T is the txn currently running
             //  IF T.ts > min ts of owners
@@ -102,7 +102,7 @@ RC Row_lock::lock_get(lock_t type, TxnManager * txn, uint64_t* &txnids, int &txn
               en = owners[i];
               while (en != NULL) {
                 assert(txn->get_txn_id() != en->txn->get_txn_id());
-                // assert(txn->get_timestamp() != en->txn->get_timestamp());
+                assert(txn->get_timestamp() != en->txn->get_timestamp());
                 if (txn->get_timestamp() > en->txn->get_timestamp()) {
             // printf("abort %ld %ld -- %ld --
             // %f\n",txn->get_txn_id(),en->txn->get_txn_id(),_row->get_primary_key(),(float)(txn->get_timestamp()
@@ -119,6 +119,10 @@ RC Row_lock::lock_get(lock_t type, TxnManager * txn, uint64_t* &txnids, int &txn
             if (canwait) {
                 // insert txn to the right position
                 // the waiter list is always in timestamp order
+                // if (txn->is_dncc) {
+                //     rc = RCOK;
+                //     goto final;
+                // }
                 LockEntry * entry = get_entry();
                 entry->start_ts = get_sys_clock();
                         entry->txn = txn;
@@ -291,6 +295,8 @@ RC Row_lock::lock_release(TxnManager * txn) {
         lock_type = LOCK_NONE;
       }
 
+    } else if (txn->is_dncc) {
+        
     } else {
       assert(false);
           en = waiters_head;
@@ -306,7 +312,7 @@ RC Row_lock::lock_release(TxnManager * txn) {
 #endif
 
   if (owner_cnt == 0) ASSERT(lock_type == LOCK_NONE);
-#if DEBUG_ASSERT && CC_ALG == WAIT_DIE
+#if DEBUG_ASSERT && (CC_ALG == WAIT_DIE || CC_ALG == DNCC)
       for (en = waiters_head; en != NULL && en->next != NULL; en = en->next)
         assert(en->next->txn->get_timestamp() < en->txn->get_timestamp());
       for (en = waiters_head; en != NULL && en->next != NULL; en = en->next)
@@ -317,6 +323,9 @@ RC Row_lock::lock_release(TxnManager * txn) {
       // If any waiter can join the owners, just do it!
       while (waiters_head && !conflict_lock(lock_type, waiters_head->type)) {
           LIST_GET_HEAD(waiters_head, waiters_tail, entry);
+          if (!entry->txn || entry->txn->is_commit || entry->txn->aborted) {
+            continue;
+          }
 #if DEBUG_TIMELINE
           printf("LOCK %ld %ld\n",entry->txn->get_txn_id(),get_sys_clock());
 #endif

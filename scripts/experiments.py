@@ -200,15 +200,18 @@ def ycsb_tcm_test():
 
 def ycsb_skew1():
     wl = 'YCSB'
-    nnodes = [2]
-    algos=dta_target_algos
+    nnodes = [4]
+    # algos=['DNCC']
+    algos=['WAIT_DIE']
+    # algos=['DNCC', 'WAIT_DIE']
     base_table_size=2097152*8
     txn_write_perc = [0.5]
-    tup_write_perc = [0.5]
+    tup_write_perc = [1]
     load = [10000]
     tcnt = [4]
    # skew = [0.0,0.25,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.9]
-    skew = [0.0,0.6,0.9]
+    # skew = [0.0,0.6,0.9]
+    skew = [0.5]
     fmt = ["WORKLOAD","NODE_CNT","CC_ALG","SYNTH_TABLE_SIZE","TUP_WRITE_PERC","TXN_WRITE_PERC","MAX_TXN_IN_FLIGHT","ZIPF_THETA","THREAD_CNT"]
     exp = [[wl,n,algo,base_table_size*n,tup_wr_perc,txn_wr_perc,ld,sk,thr] for thr,txn_wr_perc,tup_wr_perc,ld,n,sk,algo in itertools.product(tcnt,txn_write_perc,tup_write_perc,load,nnodes,skew,algos)]
     return fmt,exp
@@ -877,14 +880,14 @@ configs = {
     "REPLICA_TYPE": "AP",
     "REM_THREAD_CNT": 1,
     "SEND_THREAD_CNT": 4,
-    "CLIENT_NODE_CNT" : 8, #"NODE_CNT",
+    "CLIENT_NODE_CNT" : "NODE_CNT", #"NODE_CNT",
     "CLIENT_THREAD_CNT" : 4,
     "CLIENT_REM_THREAD_CNT" : 1,
     "CLIENT_SEND_THREAD_CNT" : 1,
     "MAX_TXN_PER_PART" : 500000,
     "WORKLOAD" : "YCSB",
     "CC_ALG" : "WAIT_DIE",
-    "MPR" : 1.0,
+    "MPR" : 0.5,
     "TPORT_TYPE":"IPC",
     "TPORT_PORT":"18000",
     "PART_CNT": "NODE_CNT",
@@ -911,7 +914,7 @@ configs = {
     "ZIPF_THETA":0.3,
     "ACCESS_PERC":0.03,
     "DATA_PERC": 100,
-    "REQ_PER_QUERY": 10,
+    "REQ_PER_QUERY": 5,
     "SYNTH_TABLE_SIZE":"65536",
 #TPCC
     "NUM_WH": 'PART_CNT',

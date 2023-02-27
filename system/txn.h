@@ -173,7 +173,7 @@ public:
 	txnid_t         get_txn_id();
 	void            set_query(BaseQuery * qry);
 	BaseQuery *     get_query();
-	bool            is_done();
+	virtual bool	is_done() = 0;
 	void            commit_stats();
 	bool            is_multi_part();
 
@@ -203,6 +203,8 @@ public:
 	RC start_abort();
 	RC abort();
 	pthread_mutex_t *ts_interval_lock;
+	pthread_mutex_t *subtxn_lock;
+	pthread_mutex_t *wr_lock;
 
 	void release_locks(RC rc);
 	bool isRecon() {
@@ -260,6 +262,9 @@ public:
 	std::set<uint64_t> * uncommitted_writes;
 	std::set<uint64_t> * uncommitted_writes_y;
 
+	bool first_send = false;
+	bool is_dncc = false;
+	uint64_t txn_state = 0;// 0 execution, 1, prepare, 2 commit
 	uint64_t twopl_wait_start;
 
 	// For Tictoc
@@ -276,6 +281,7 @@ public:
 	uint64_t _lock_acquire_time;
 	uint64_t _lock_acquire_time_commit;
 	uint64_t _lock_acquire_time_abort;
+	uint64_t start_rw_time;
 	////////////////////////////////
 	// LOGGING
 	////////////////////////////////
@@ -302,6 +308,7 @@ public:
 	bool unset_ready() {return ATOM_CAS(txn_ready,1,0);}
 	bool is_ready() {return txn_ready == true;}
 	volatile int txn_ready;
+	volatile bool finish_read_write;
 	// Calvin
 	uint32_t lock_ready_cnt;
 	uint32_t calvin_expected_rsp_cnt;

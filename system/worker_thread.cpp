@@ -415,6 +415,21 @@ RC WorkerThread::run() {
 
     if((msg->rtype != CL_QRY && msg->rtype != CL_QRY_O) || CC_ALG == CALVIN) {
       txn_man = get_transaction_manager(msg);
+      
+      if(msg->rtype == RACK_FIN || msg->rtype == RACK_PREP) { 
+        if(!txn_man || !(txn_man->txn) || !txn_man->query) {//txn already committed
+          // printf("txn %lu type %d already commit\n", msg->get_txn_id(),msg->get_rtype());
+          continue;
+        }
+        else if (txn_man->txn_state == 2 && msg->rtype == RACK_PREP) {
+          // DEBUG_T("txn %ld type %d state %ld\n", msg->get_txn_id(),msg->get_rtype(), txn_man->txn_state);
+          continue;
+        }
+        else if (txn_man->txn_state == 3 && msg->rtype == RACK_FIN) {
+          // DEBUG_T("txn %ld type %d state %ld\n", msg->get_txn_id(),msg->get_rtype(), txn_man->txn_state);
+          continue;
+        }
+      }
 
       if (CC_ALG != CALVIN && IS_LOCAL(txn_man->get_txn_id())) {
         if (msg->rtype != RTXN_CONT &&
@@ -452,7 +467,10 @@ RC WorkerThread::run() {
 
 
       ready_starttime = get_sys_clock();
-      bool ready = txn_man->unset_ready();
+      bool ready;
+      if(msg->rtype == RFIN && !txn_man->finish_read_write) ready = false;
+      else ready = txn_man->unset_ready(); 
+      // bool ready = txn_man->unset_ready();
       INC_STATS(get_thd_id(),worker_activate_txn_time,get_sys_clock() - ready_starttime);
       if(!ready) {
         // Return to work queue, end processing
@@ -498,6 +516,8 @@ RC WorkerThread::process_rfin(Message * msg) {
     CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3 || CC_ALG == DLI_MVCC_OCC || CC_ALG == DLI_MVCC || CC_ALG == SILO
   txn_man->set_commit_timestamp(((FinishMessage*)msg)->commit_timestamp);
 #endif
+  txn_man->abort_cnt = msg->current_abort_cnt;
+  txn_man->set_rc(((FinishMessage*)msg)->rc);
 
   if(((FinishMessage*)msg)->rc == Abort) {
     txn_man->abort();
@@ -523,6 +543,11 @@ RC WorkerThread::process_rack_prep(Message * msg) {
   DEBUG("RPREP_ACK %ld\n",msg->get_txn_id());
 
   RC rc = RCOK;
+
+  if (!txn_man || !(txn_man->txn) || !txn_man->query || txn_man->query->partitions_touched.size() == 0) {
+    DEBUG("RPREP_ACK skip %ld from %ld\n",msg->get_txn_id(),msg->get_return_id());
+    return RCOK;
+  }
 
   int responses_left = txn_man->received_response(((AckMessage*)msg)->rc);
   assert(responses_left >=0);
@@ -622,11 +647,18 @@ RC WorkerThread::process_rack_rfin(Message * msg) {
 
   RC rc = RCOK;
 
+  // if (!txn_man || !(txn_man->txn) || !txn_man->query || txn_man->query->partitions_touched.size() == 0 || txn_man->abort_cnt != msg->current_abort_cnt) {
+  if (!txn_man || !(txn_man->txn) || !txn_man->query || txn_man->query->partitions_touched.size() == 0) {
+    DEBUG("RPREP_ACK skip %ld from %ld\n",msg->get_txn_id(),msg->get_return_id());
+    return RCOK;
+  }
+
   int responses_left = txn_man->received_response(((AckMessage*)msg)->rc);
   assert(responses_left >=0);
   if (responses_left > 0) return WAIT;
 
   // Done waiting
+  txn_man->txn_state = 3;
   txn_man->txn_stats.twopc_time += get_sys_clock() - txn_man->txn_stats.wait_starttime;
 
   if(txn_man->get_rc() == RCOK) {
@@ -644,6 +676,46 @@ RC WorkerThread::process_rack_rfin(Message * msg) {
 RC WorkerThread::process_rqry_rsp(Message * msg) {
   DEBUG("RQRY_RSP %ld\n",msg->get_txn_id());
   assert(IS_LOCAL(msg->get_txn_id()));
+  
+#if PARAL_SUBTXN == true
+  // if (!txn_man->query || txn_man->query->partitions_touched.size() == 0 || txn_man->abort_cnt != msg->current_abort_cnt) return RCOK;
+  if (!txn_man->query || txn_man->query->partitions_touched.size() == 0) return RCOK;
+
+  pthread_mutex_lock(txn_man->subtxn_lock);
+  int responses_left = txn_man->received_response(((AckMessage*)msg)->rc);
+  assert(responses_left >=0);
+  
+  bool need_abort = (((QueryResponseMessage*)msg)->rc == Abort) || (txn_man->get_rc() == Abort);
+  if(!txn_man->aborted && need_abort) {
+    if (responses_left == 0 && txn_man->is_done()) {
+      txn_man->start_abort();
+    } else {
+      txn_man->set_rc(Abort);
+    }
+  }
+
+  if (responses_left > 0) {
+    pthread_mutex_unlock(txn_man->subtxn_lock);
+    return WAIT;
+  }
+  pthread_mutex_unlock(txn_man->subtxn_lock);
+  
+  //Done Waiting
+  txn_man->txn_stats.remote_wait_time += get_sys_clock() - txn_man->txn_stats.wait_starttime;
+  // printf("enter prepare phase %ld\n", get_sys_clock() - txn_man->start_rw_time);
+  // printf("read/write time %ld\n", get_sys_clock() - txn_man->start_rw_time);
+  // printf("txn %lu remote result is ok. rsp_cnt: %d.\n", txn_man->get_txn_id(), responses_left);
+  #if CC_ALG == DNCC
+  assert(!txn_man->is_done());
+  txn_man->is_dncc = true;
+  RC rc = txn_man->run_txn();
+  #else 
+  if (!txn_man->is_done()) return WAIT;
+
+  RC rc = txn_man->get_rc();
+  if(rc == RCOK) rc = txn_man->start_commit();  
+  #endif
+#else 
   INC_STATS(get_thd_id(), trans_process_network, get_sys_clock() - txn_man->txn_stats.trans_process_network_start_time);
   txn_man->txn_stats.remote_wait_time += get_sys_clock() - txn_man->txn_stats.wait_starttime;
 
@@ -660,6 +732,7 @@ RC WorkerThread::process_rqry_rsp(Message * msg) {
 #endif
   txn_man->send_RQRY_RSP = false;
   RC rc = txn_man->run_txn();
+#endif
   check_if_done(rc);
   return rc;
 }
@@ -698,10 +771,12 @@ RC WorkerThread::process_rqry(Message * msg) {
   dta_time_table.init(get_thd_id(), txn_man->get_txn_id(), txn_man->get_start_timestamp());
 #endif
   txn_man->send_RQRY_RSP = true;
+  txn_man->abort_cnt = msg->current_abort_cnt;
   rc = txn_man->run_txn();
 
   // Send response
   if(rc != WAIT) {
+    txn_man->finish_read_write = true;
     msg_queue.enqueue(get_thd_id(),Message::create_message(txn_man,RQRY_RSP),txn_man->return_id);
   }
   return rc;
@@ -718,6 +793,7 @@ RC WorkerThread::process_rqry_cont(Message * msg) {
 
   // Send response
   if(rc != WAIT) {
+    txn_man->finish_read_write = true;
     msg_queue.enqueue(get_thd_id(),Message::create_message(txn_man,RQRY_RSP),txn_man->return_id);
   }
   return rc;
@@ -740,7 +816,7 @@ RC WorkerThread::process_rtxn_cont(Message * msg) {
 RC WorkerThread::process_rprepare(Message * msg) {
   DEBUG("RPREP %ld\n",msg->get_txn_id());
     RC rc = RCOK;
-
+    txn_man->abort_cnt = msg->current_abort_cnt;
 #if CC_ALG == TICTOC
     // Integrate bounds
     TxnManager * txn_man = txn_table.get_transaction_manager(get_thd_id(),msg->get_txn_id(),0);
@@ -789,7 +865,7 @@ RC WorkerThread::process_rtxn(Message * msg) {
     bool ready = txn_man->unset_ready();
     INC_STATS(get_thd_id(),worker_activate_txn_time,get_sys_clock() - ready_starttime);
     assert(ready);
-    if (CC_ALG == WAIT_DIE) {
+    if (CC_ALG == WAIT_DIE || CC_ALG == DNCC) {
       #if WORKLOAD == DA //mvcc use timestamp
         if (da_stamp_tab.count(txn_man->get_txn_id())==0)
         {

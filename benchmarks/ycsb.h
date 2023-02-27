@@ -65,20 +65,26 @@ public:
   RC run_txn_post_wait();
 	RC run_calvin_txn();
   void copy_remote_requests(YCSBQueryMessage * msg);
+  bool is_done() override;
 private:
   void next_ycsb_state();
   RC run_txn_state();
   RC run_ycsb_0(ycsb_request * req,row_t *& row_local);
   RC run_ycsb_1(access_t acctype, row_t * row_local);
   RC run_ycsb();
-  bool is_done() ;
+
   bool is_local_request(uint64_t idx) ;
   RC send_remote_request() ;
+  RC send_remote_subtxn();
+  void get_num_msgs_statistics();
 
+  bool send_to_remote;
   row_t * row;
 	YCSBWorkload * _wl;
 	YCSBRemTxnType state;
   uint64_t next_record_id;
+  uint64_t remote_next_node_id;
+  vector<vector<uint64_t>> remote_node{g_node_cnt};
 };
 
 #endif
