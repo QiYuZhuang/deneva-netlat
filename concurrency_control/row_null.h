@@ -22,19 +22,19 @@ class Catalog;
 class TxnManager;
 
 class Row_null {
- public:
-  void init(row_t* row);
-  RC access(access_t type, TxnManager* txn);
-  RC abort(access_t type, TxnManager* txn);
-  RC commit(access_t type, TxnManager* txn);
+public:
+    void init(row_t* row);
+    RC access(access_t type, TxnManager* txn);
+    RC abort(access_t type, TxnManager* txn);
+    RC commit(access_t type, TxnManager* txn);
 
- private:
-  row_t* _row;
+private:
+    row_t* _row;
 
-   // multi-verison part
- private:
-  pthread_mutex_t* latch;
-  bool blatch;
+    // multi-verison part
+private:
+    pthread_mutex_t* latch;
+    bool blatch;
 };
 
 #endif

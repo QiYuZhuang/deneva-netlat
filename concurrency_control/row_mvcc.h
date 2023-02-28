@@ -22,55 +22,54 @@ class Catalog;
 class TxnManager;
 
 struct MVReqEntry {
-	TxnManager * txn;
-	ts_t ts;
-	ts_t starttime;
-	MVReqEntry * next;
+    TxnManager* txn;
+    ts_t ts;
+    ts_t starttime;
+    MVReqEntry* next;
 };
 
 struct MVHisEntry {
-	ts_t ts;
-	// only for write history. The value needs to be stored.
-//	char * data;
-	row_t * row;
-	MVHisEntry * next;
-	MVHisEntry * prev;
+    ts_t ts;
+    // only for write history. The value needs to be stored.
+    //	char * data;
+    row_t* row;
+    MVHisEntry* next;
+    MVHisEntry* prev;
 };
-
-
 
 class Row_mvcc {
 public:
-	void init(row_t * row);
-	RC access(TxnManager * txn, TsType type, row_t * row);
+    void init(row_t* row);
+    RC access(TxnManager* txn, TsType type, row_t* row);
+
 private:
- 	pthread_mutex_t * latch;
-	bool blatch;
+    pthread_mutex_t* latch;
+    bool blatch;
 
-	row_t * _row;
-	MVReqEntry * get_req_entry();
-	void return_req_entry(MVReqEntry * entry);
-	MVHisEntry * get_his_entry();
-	void return_his_entry(MVHisEntry * entry);
+    row_t* _row;
+    MVReqEntry* get_req_entry();
+    void return_req_entry(MVReqEntry* entry);
+    MVHisEntry* get_his_entry();
+    void return_his_entry(MVHisEntry* entry);
 
-	bool conflict(TsType type, ts_t ts);
-	void buffer_req(TsType type, TxnManager * txn);
-	MVReqEntry * debuffer_req( TsType type, TxnManager * txn = NULL);
-	void update_buffer(TxnManager * txn);
-	void insert_history( ts_t ts, row_t * row);
+    bool conflict(TsType type, ts_t ts);
+    void buffer_req(TsType type, TxnManager* txn);
+    MVReqEntry* debuffer_req(TsType type, TxnManager* txn = NULL);
+    void update_buffer(TxnManager* txn);
+    void insert_history(ts_t ts, row_t* row);
 
-	row_t * clear_history(TsType type, ts_t ts);
+    row_t* clear_history(TsType type, ts_t ts);
 
-	MVReqEntry * readreq_mvcc;
-    MVReqEntry * prereq_mvcc;
-    MVHisEntry * readhis;
-    MVHisEntry * writehis;
-	MVHisEntry * readhistail;
-	MVHisEntry * writehistail;
-	uint64_t whis_len;
-	uint64_t rhis_len;
-	uint64_t rreq_len;
-	uint64_t preq_len;
+    MVReqEntry* readreq_mvcc;
+    MVReqEntry* prereq_mvcc;
+    MVHisEntry* readhis;
+    MVHisEntry* writehis;
+    MVHisEntry* readhistail;
+    MVHisEntry* writehistail;
+    uint64_t whis_len;
+    uint64_t rhis_len;
+    uint64_t rreq_len;
+    uint64_t preq_len;
 };
 
 #endif

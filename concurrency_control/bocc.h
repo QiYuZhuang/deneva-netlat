@@ -20,7 +20,6 @@
 #include "row.h"
 #include "semaphore.h"
 
-
 // For simplicity, the txn hisotry for OCC is oganized as follows:
 // 1. history is never deleted.
 // 2. hisotry forms a single directional list.
@@ -30,38 +29,39 @@
 
 class TxnManager;
 
-class b_set_ent{
+class b_set_ent {
 public:
-	b_set_ent();
-	UInt64 tn;
-	TxnManager * txn;
-	UInt32 set_size;
-	row_t ** rows; //[MAX_WRITE_SET];
-	b_set_ent * next;
+    b_set_ent();
+    UInt64 tn;
+    TxnManager *txn;
+    UInt32 set_size;
+    row_t **rows;  //[MAX_WRITE_SET];
+    b_set_ent *next;
 };
 
 class Bocc {
 public:
-	void init();
-	RC validate(TxnManager * txn);
-	void finish(RC rc, TxnManager * txn);
-	volatile bool lock_all;
-	uint64_t lock_txn_id;
+    void init();
+    RC validate(TxnManager *txn);
+    void finish(RC rc, TxnManager *txn);
+    volatile bool lock_all;
+    uint64_t lock_txn_id;
+
 private:
-	// serial validation in the original OCC paper.
-	RC central_validate(TxnManager * txn);
+    // serial validation in the original OCC paper.
+    RC central_validate(TxnManager *txn);
 
-	void central_finish(RC rc, TxnManager * txn);
-	bool test_valid(b_set_ent * set1, b_set_ent * set2);
-	RC get_rw_set(TxnManager * txni, b_set_ent * &rset, b_set_ent *& wset);
+    void central_finish(RC rc, TxnManager *txn);
+    bool test_valid(b_set_ent *set1, b_set_ent *set2);
+    RC get_rw_set(TxnManager *txni, b_set_ent *&rset, b_set_ent *&wset);
 
-	// "history" stores write set of transactions with tn >= smallest running tn
-	b_set_ent * history;
-	uint64_t his_len;
+    // "history" stores write set of transactions with tn >= smallest running tn
+    b_set_ent *history;
+    uint64_t his_len;
 
-	volatile uint64_t tnc; // transaction number counter
-	pthread_mutex_t latch;
- 	sem_t 	_semaphore;
+    volatile uint64_t tnc;  // transaction number counter
+    pthread_mutex_t latch;
+    sem_t _semaphore;
 };
 
 #endif

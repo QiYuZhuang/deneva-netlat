@@ -15,54 +15,42 @@
 */
 
 #include "global.h"
-#include "mem_alloc.h"
-#include "stats.h"
-#include "sim_manager.h"
-#include "manager.h"
-#include "query.h"
-#include "client_query.h"
-#include "occ.h"
-#include "bocc.h"
-#include "focc.h"
-#include "ssi.h"
-#include "wsi.h"
-#include "transport.h"
-#include "work_queue.h"
+
+#include <boost/lockfree/queue.hpp>
+
 #include "abort_queue.h"
+#include "adaptor.h"
+#include "bocc.h"
 #include "client_query.h"
 #include "client_txn.h"
+#include "da_block_queue.h"
+#include "dli.h"
+#include "dta.h"
+#include "focc.h"
+#include "key_xid.h"
 #include "logger.h"
 #include "maat.h"
 #include "manager.h"
 #include "mem_alloc.h"
 #include "msg_queue.h"
+#include "occ.h"
 #include "pool.h"
 #include "query.h"
+#include "rts_cache.h"
 #include "sequencer.h"
-#include "dli.h"
 #include "sim_manager.h"
+#include "ssi.h"
 #include "stats.h"
+#include "tictoc.h"
 #include "transport.h"
 #include "txn_table.h"
-#include "work_queue.h"
-#include "dta.h"
-#include "client_txn.h"
-#include "sequencer.h"
-#include "logger.h"
-#include "maat.h"
 #include "wkdb.h"
-#include "tictoc.h"
-#include "key_xid.h"
-#include "rts_cache.h"
-#include "adaptor.h"
-
-#include <boost/lockfree/queue.hpp>
-#include "da_block_queue.h"
-
+#include "work_queue.h"
+#include "wsi.h"
 
 mem_alloc mem_allocator;
 Stats stats;
-SimManager * simulation;
+SimManager* simulation;
 Manager glob_manager;
 Query_queue query_queue;
 Client_query_queue client_query_queue;
@@ -104,7 +92,7 @@ adaptor wookong_governor;
 
 boost::lockfree::queue<DAQuery*, boost::lockfree::fixed_sized<true>> da_query_queue{100};
 DABlockQueue da_gen_qry_queue(50);
-bool is_server=false;
+bool is_server = false;
 map<uint64_t, ts_t> da_start_stamp_tab;
 set<uint64_t> da_start_trans_tab;
 map<uint64_t, ts_t> da_stamp_tab;
@@ -126,7 +114,7 @@ bool g_key_order = KEY_ORDER;
 bool g_ts_batch_alloc = TS_BATCH_ALLOC;
 UInt32 g_ts_batch_num = TS_BATCH_NUM;
 int32_t g_inflight_max = MAX_TXN_IN_FLIGHT;
-//int32_t g_inflight_max = MAX_TXN_IN_FLIGHT/NODE_CNT;
+// int32_t g_inflight_max = MAX_TXN_IN_FLIGHT/NODE_CNT;
 uint64_t g_msg_size = MSG_SIZE_MAX;
 int32_t g_load_per_server = LOAD_PER_SERVER;
 
@@ -154,7 +142,7 @@ UInt32 g_virtual_part_cnt = VIRTUAL_PART_CNT;
 UInt32 g_core_cnt = CORE_CNT;
 
 #if CC_ALG == HSTORE || CC_ALG == HSTORE_SPEC
-UInt32 g_thread_cnt = PART_CNT/NODE_CNT;
+UInt32 g_thread_cnt = PART_CNT / NODE_CNT;
 #else
 UInt32 g_thread_cnt = THREAD_CNT;
 #endif
@@ -168,13 +156,15 @@ UInt32 g_logger_thread_cnt = 0;
 UInt32 g_send_thread_cnt = SEND_THREAD_CNT;
 #if CC_ALG == CALVIN
 // sequencer + scheduler thread
-UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + 3;
+UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt +
+                            g_abort_thread_cnt + g_logger_thread_cnt + 3;
 #else
-UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + 1;
+UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt +
+                            g_abort_thread_cnt + g_logger_thread_cnt + 1;
 #endif
 #if CC_ALG == WOOKONG
 UInt32 g_adaptor_thread_cnt = 2;
-UInt32 g_adaptor_sleep_time = 1000; // 1000 us = 1 ms, initial 5 s
+UInt32 g_adaptor_sleep_time = 1000;  // 1000 us = 1 ms, initial 5 s
 std::set<TxnNode> txn_set;
 #else
 UInt32 g_adaptor_thread_cnt = 0;
@@ -182,8 +172,9 @@ UInt32 g_adaptor_sleep_time = UINT32_MAX;
 std::set<TxnNode> txn_set;
 #endif
 
-UInt32 g_total_client_thread_cnt = g_client_thread_cnt + g_client_rem_thread_cnt + g_client_send_thread_cnt;
-UInt32 g_total_node_cnt = g_node_cnt + g_client_node_cnt + g_repl_cnt*g_node_cnt;
+UInt32 g_total_client_thread_cnt =
+    g_client_thread_cnt + g_client_rem_thread_cnt + g_client_send_thread_cnt;
+UInt32 g_total_node_cnt = g_node_cnt + g_client_node_cnt + g_repl_cnt * g_node_cnt;
 UInt64 g_synth_table_size = SYNTH_TABLE_SIZE;
 UInt32 g_req_per_query = REQ_PER_QUERY;
 bool g_strict_ppt = STRICT_PPT == 1;
@@ -246,9 +237,9 @@ double g_perc_updatepart = PERC_PPS_UPDATEPART;
 UInt32 g_num_wh = NUM_WH;
 double g_perc_payment = PERC_PAYMENT;
 bool g_wh_update = WH_UPDATE;
-char * output_file = NULL;
-char * input_file = NULL;
-char * txn_file = NULL;
+char* output_file = NULL;
+char* input_file = NULL;
+char* txn_file = NULL;
 
 #if TPCC_SMALL
 UInt32 g_max_items = MAX_ITEMS_SMALL;

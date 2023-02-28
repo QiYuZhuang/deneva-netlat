@@ -28,39 +28,39 @@ class PPSClientQueryMessage;
 
 class PPSQueryGenerator : public QueryGenerator {
 public:
-  BaseQuery * create_query(Workload * h_wl, uint64_t home_partition_id);
+    BaseQuery* create_query(Workload* h_wl, uint64_t home_partition_id);
 
 private:
-	BaseQuery * gen_requests_parts(uint64_t home_partition_id);
-	BaseQuery * gen_requests_suppliers(uint64_t home_partition_id);
-	BaseQuery * gen_requests_products(uint64_t home_partition_id);
-	BaseQuery * gen_requests_partsbysupplier(uint64_t home_partition_id);
-	BaseQuery * gen_requests_partsbyproduct(uint64_t home_partition_id);
-	BaseQuery * gen_requests_orderproduct(uint64_t home_partition_id);
-	BaseQuery * gen_requests_updateproductpart(uint64_t home_partition_id);
-	BaseQuery * gen_requests_updatepart(uint64_t home_partition_id);
-	myrand * mrand;
+    BaseQuery* gen_requests_parts(uint64_t home_partition_id);
+    BaseQuery* gen_requests_suppliers(uint64_t home_partition_id);
+    BaseQuery* gen_requests_products(uint64_t home_partition_id);
+    BaseQuery* gen_requests_partsbysupplier(uint64_t home_partition_id);
+    BaseQuery* gen_requests_partsbyproduct(uint64_t home_partition_id);
+    BaseQuery* gen_requests_orderproduct(uint64_t home_partition_id);
+    BaseQuery* gen_requests_updateproductpart(uint64_t home_partition_id);
+    BaseQuery* gen_requests_updatepart(uint64_t home_partition_id);
+    myrand* mrand;
 };
 
 class PPSQuery : public BaseQuery {
 public:
-    void init(uint64_t thd_id, Workload * h_wl);
+    void init(uint64_t thd_id, Workload* h_wl);
     void init();
     void reset();
     void release();
     void print();
-    static std::set<uint64_t> participants(Message * msg, Workload * wl);
-    uint64_t participants(bool *& pps,Workload * wl);
-    uint64_t get_participants(Workload * wl);
+    static std::set<uint64_t> participants(Message* msg, Workload* wl);
+    uint64_t participants(bool*& pps, Workload* wl);
+    uint64_t get_participants(Workload* wl);
     bool readonly();
     virtual bool isReconQuery() {
-    bool result = (txn_type == PPS_GETPARTBYSUPPLIER) || (txn_type == PPS_GETPARTBYPRODUCT) ||
-                (txn_type == PPS_ORDERPRODUCT);
+        bool result = (txn_type == PPS_GETPARTBYSUPPLIER) || (txn_type == PPS_GETPARTBYPRODUCT) ||
+                      (txn_type == PPS_ORDERPRODUCT);
         return result;
     }
 
-	PPSTxnType txn_type;
-	// txn input
+    PPSTxnType txn_type;
+    // txn input
 
     uint64_t rqry_req_cnt;
     uint64_t part_key;
@@ -72,7 +72,6 @@ public:
 
     // track number of parts we've read
     // in a getpartsbyX query
-
 };
 
 #endif

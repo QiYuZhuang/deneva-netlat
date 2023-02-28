@@ -17,10 +17,10 @@
 #ifndef _MESSAGE_H_
 #define _MESSAGE_H_
 
+#include "array.h"
 #include "global.h"
 #include "helper.h"
 #include "logger.h"
-#include "array.h"
 
 class ycsb_request;
 class LogRecord;
@@ -28,470 +28,466 @@ struct Item_no;
 
 class Message {
 public:
-  virtual ~Message(){}
-  static Message * create_message(char * buf);
-  static Message * create_message(BaseQuery * query, RemReqType rtype);
-  static Message * create_message(TxnManager * txn, RemReqType rtype);
-  static Message * create_message(uint64_t txn_id, RemReqType rtype);
-  static Message * create_message(uint64_t txn_id,uint64_t batch_id, RemReqType rtype);
-  static Message * create_message(LogRecord * record, RemReqType rtype);
-  static Message * create_message(RemReqType rtype);
-  static std::vector<Message*> * create_messages(char * buf);
-  static void release_message(Message * msg);
-  RemReqType rtype;
-  uint64_t txn_id;
-  uint64_t batch_id;
-  uint64_t return_node_id;
+    virtual ~Message() {}
+    static Message* create_message(char* buf);
+    static Message* create_message(BaseQuery* query, RemReqType rtype);
+    static Message* create_message(TxnManager* txn, RemReqType rtype);
+    static Message* create_message(uint64_t txn_id, RemReqType rtype);
+    static Message* create_message(uint64_t txn_id, uint64_t batch_id, RemReqType rtype);
+    static Message* create_message(LogRecord* record, RemReqType rtype);
+    static Message* create_message(RemReqType rtype);
+    static std::vector<Message*>* create_messages(char* buf);
+    static void release_message(Message* msg);
+    RemReqType rtype;
+    uint64_t txn_id;
+    uint64_t batch_id;
+    uint64_t return_node_id;
 
-  uint64_t wq_time;
-  uint64_t mq_time;
-  uint64_t ntwk_time;
-  //uint64_t txn_type;
-  //uint64_t seq_id;
-  //uint64_t trans_id;
-  // network part
-  uint64_t send_time;
+    uint64_t wq_time;
+    uint64_t mq_time;
+    uint64_t ntwk_time;
+    // uint64_t txn_type;
+    // uint64_t seq_id;
+    // uint64_t trans_id;
+    //  network part
+    uint64_t send_time;
 
-  // Collect other stats
-  uint64_t current_abort_cnt;
-  double lat_work_queue_time;
-  double lat_msg_queue_time;
-  double lat_cc_block_time;
-  double lat_cc_time;
-  double lat_process_time;
-  double lat_network_time;
-  double lat_other_time;
+    // Collect other stats
+    uint64_t current_abort_cnt;
+    double lat_work_queue_time;
+    double lat_msg_queue_time;
+    double lat_cc_block_time;
+    double lat_cc_time;
+    double lat_process_time;
+    double lat_network_time;
+    double lat_other_time;
 
-  uint64_t mget_size();
-  uint64_t get_txn_id() {return txn_id;}
-  uint64_t get_batch_id() {return batch_id;}
-  uint64_t get_return_id() {return return_node_id;}
-  void mcopy_from_buf(char * buf);
-  void mcopy_to_buf(char * buf);
-  void mcopy_from_txn(TxnManager * txn);
-  void mcopy_to_txn(TxnManager * txn);
-  RemReqType get_rtype() {return rtype;}
+    uint64_t mget_size();
+    uint64_t get_txn_id() { return txn_id; }
+    uint64_t get_batch_id() { return batch_id; }
+    uint64_t get_return_id() { return return_node_id; }
+    void mcopy_from_buf(char* buf);
+    void mcopy_to_buf(char* buf);
+    void mcopy_from_txn(TxnManager* txn);
+    void mcopy_to_txn(TxnManager* txn);
+    RemReqType get_rtype() { return rtype; }
 
-  virtual uint64_t get_size() = 0;
-  virtual void copy_from_buf(char * buf) = 0;
-  virtual void copy_to_buf(char * buf) = 0;
-  virtual void copy_to_txn(TxnManager * txn) = 0;
-  virtual void copy_from_txn(TxnManager * txn) = 0;
-  virtual void init() = 0;
-  virtual void release() = 0;
+    virtual uint64_t get_size() = 0;
+    virtual void copy_from_buf(char* buf) = 0;
+    virtual void copy_to_buf(char* buf) = 0;
+    virtual void copy_to_txn(TxnManager* txn) = 0;
+    virtual void copy_from_txn(TxnManager* txn) = 0;
+    virtual void init() = 0;
+    virtual void release() = 0;
 };
 
 // Message types
 class InitDoneMessage : public Message {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init() {}
-  void release() {}
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init() {}
+    void release() {}
 };
 
 class FinishMessage : public Message {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init() {}
-  void release() {}
-  bool is_abort() { return rc == Abort;}
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init() {}
+    void release() {}
+    bool is_abort() { return rc == Abort; }
 
-  uint64_t pid;
-  RC rc;
-  //uint64_t txn_id;
-  //uint64_t batch_id;
-  bool readonly;
-#if CC_ALG == MAAT || CC_ALG == WOOKONG || CC_ALG == SSI || CC_ALG == WSI || \
-    CC_ALG == DTA || CC_ALG == DLI_DTA || CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3 || CC_ALG == DLI_MVCC_OCC || \
+    uint64_t pid;
+    RC rc;
+    // uint64_t txn_id;
+    // uint64_t batch_id;
+    bool readonly;
+#if CC_ALG == MAAT || CC_ALG == WOOKONG || CC_ALG == SSI || CC_ALG == WSI || CC_ALG == DTA ||  \
+    CC_ALG == DLI_DTA || CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3 || CC_ALG == DLI_MVCC_OCC || \
     CC_ALG == DLI_MVCC || CC_ALG == SILO
-  uint64_t commit_timestamp;
+    uint64_t commit_timestamp;
 #endif
 };
 
 class LogMessage : public Message {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init() {}
-  void release();
-  void copy_from_record(LogRecord * record);
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init() {}
+    void release();
+    void copy_from_record(LogRecord* record);
 
-  //Array<LogRecord*> log_records;
-  LogRecord record;
+    // Array<LogRecord*> log_records;
+    LogRecord record;
 };
 
 class LogRspMessage : public Message {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init() {}
-  void release() {}
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init() {}
+    void release() {}
 };
 
 class LogFlushedMessage : public Message {
 public:
-  void copy_from_buf(char * buf) {}
-  void copy_to_buf(char * buf) {}
-  void copy_from_txn(TxnManager * txn) {}
-  void copy_to_txn(TxnManager * txn) {}
-  uint64_t get_size() {return sizeof(LogFlushedMessage);}
-  void init() {}
-  void release() {}
-
+    void copy_from_buf(char* buf) {}
+    void copy_to_buf(char* buf) {}
+    void copy_from_txn(TxnManager* txn) {}
+    void copy_to_txn(TxnManager* txn) {}
+    uint64_t get_size() { return sizeof(LogFlushedMessage); }
+    void init() {}
+    void release() {}
 };
-
 
 class QueryResponseMessage : public Message {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init() {}
-  void release() {}
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init() {}
+    void release() {}
 
-  RC rc;
-  uint64_t pid;
+    RC rc;
+    uint64_t pid;
 #if CC_ALG == TICTOC
-  uint64_t _min_commit_ts;
+    uint64_t _min_commit_ts;
 #endif
 };
 
 class AckMessage : public Message {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init() {}
-  void release() {}
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init() {}
+    void release() {}
 
-  RC rc;
-#if CC_ALG == MAAT || CC_ALG == WOOKONG || CC_ALG == DTA || CC_ALG == DLI_DTA || CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3
-  uint64_t lower;
-  uint64_t upper;
+    RC rc;
+#if CC_ALG == MAAT || CC_ALG == WOOKONG || CC_ALG == DTA || CC_ALG == DLI_DTA || \
+    CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3
+    uint64_t lower;
+    uint64_t upper;
 #endif
 #if CC_ALG == SILO
-  uint64_t max_tid;
+    uint64_t max_tid;
 #endif
 
-  // For Calvin PPS: part keys from secondary lookup for sequencer response
-  Array<uint64_t> part_keys;
+    // For Calvin PPS: part keys from secondary lookup for sequencer response
+    Array<uint64_t> part_keys;
 };
 
 class PrepareMessage : public Message {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init() {}
-  void release() {}
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init() {}
+    void release() {}
 
-  uint64_t pid;
-  RC rc;
+    uint64_t pid;
+    RC rc;
 #if CC_ALG == TICTOC
-  uint64_t _min_commit_ts;
+    uint64_t _min_commit_ts;
 #endif
-  uint64_t txn_id;
+    uint64_t txn_id;
 };
 
 class ForwardMessage : public Message {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init() {}
-  void release() {}
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init() {}
+    void release() {}
 
-  RC rc;
+    RC rc;
 #if WORKLOAD == TPCC
-	uint64_t o_id;
+    uint64_t o_id;
 #endif
 };
 
-
 class DoneMessage : public Message {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init() {}
-  void release() {}
-  uint64_t batch_id;
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init() {}
+    void release() {}
+    uint64_t batch_id;
 };
 
 class ClientResponseMessage : public Message {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init() {}
-  void release() {}
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init() {}
+    void release() {}
 
-  RC rc;
-  uint64_t client_startts;
+    RC rc;
+    uint64_t client_startts;
 };
 
 class ClientQueryMessage : public Message {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_query(BaseQuery * query);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init();
-  void release();
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_query(BaseQuery* query);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init();
+    void release();
 
-  uint64_t pid;
-  uint64_t ts;
+    uint64_t pid;
+    uint64_t ts;
 #if CC_ALG == CALVIN
-  uint64_t batch_id;
-  uint64_t txn_id;
+    uint64_t batch_id;
+    uint64_t txn_id;
 #endif
-  uint64_t client_startts;
-  uint64_t first_startts;
-  Array<uint64_t> partitions;
+    uint64_t client_startts;
+    uint64_t first_startts;
+    Array<uint64_t> partitions;
 };
 
 class YCSBClientQueryMessage : public ClientQueryMessage {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_query(BaseQuery * query);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init();
-  void release();
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_query(BaseQuery* query);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init();
+    void release();
 
-  Array<ycsb_request*> requests;
-
+    Array<ycsb_request*> requests;
 };
 
 class TPCCClientQueryMessage : public ClientQueryMessage {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_query(BaseQuery * query);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init();
-  void release();
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_query(BaseQuery* query);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init();
+    void release();
 
-  uint64_t txn_type;
-	// common txn input for both payment & new-order
-  uint64_t w_id;
-  uint64_t d_id;
-  uint64_t c_id;
+    uint64_t txn_type;
+    // common txn input for both payment & new-order
+    uint64_t w_id;
+    uint64_t d_id;
+    uint64_t c_id;
 
-  // payment
-  uint64_t d_w_id;
-  uint64_t c_w_id;
-  uint64_t c_d_id;
-	char c_last[LASTNAME_LEN];
-  uint64_t h_amount;
-  bool by_last_name;
+    // payment
+    uint64_t d_w_id;
+    uint64_t c_w_id;
+    uint64_t c_d_id;
+    char c_last[LASTNAME_LEN];
+    uint64_t h_amount;
+    bool by_last_name;
 
-  // new order
-  Array<Item_no*> items;
-  bool rbk;
-  bool remote;
-  uint64_t ol_cnt;
-  uint64_t o_entry_d;
-
+    // new order
+    Array<Item_no*> items;
+    bool rbk;
+    bool remote;
+    uint64_t ol_cnt;
+    uint64_t o_entry_d;
 };
 
 class PPSClientQueryMessage : public ClientQueryMessage {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_query(BaseQuery * query);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init();
-  void release();
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_query(BaseQuery* query);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init();
+    void release();
 
-  uint64_t txn_type;
+    uint64_t txn_type;
 
-  // getparts
-  uint64_t part_key;
-  // getproducts / getpartbyproduct
-  uint64_t product_key;
-  // getsuppliers / getpartbysupplier
-  uint64_t supplier_key;
+    // getparts
+    uint64_t part_key;
+    // getproducts / getpartbyproduct
+    uint64_t product_key;
+    // getsuppliers / getpartbysupplier
+    uint64_t supplier_key;
 
-  // part keys from secondary lookup
-  Array<uint64_t> part_keys;
+    // part keys from secondary lookup
+    Array<uint64_t> part_keys;
 
-  bool recon;
+    bool recon;
 };
 class DAClientQueryMessage : public ClientQueryMessage {
- public:
-  void copy_from_buf(char* buf);//ok
-  void copy_to_buf(char* buf);//ok
-  void copy_from_query(BaseQuery* query);//ok
-  void copy_from_txn(TxnManager* txn);//ok
-  void copy_to_txn(TxnManager* txn);
-  uint64_t get_size();
-  void init();
-  void release();
+public:
+    void copy_from_buf(char* buf);           // ok
+    void copy_to_buf(char* buf);             // ok
+    void copy_from_query(BaseQuery* query);  // ok
+    void copy_from_txn(TxnManager* txn);     // ok
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init();
+    void release();
 
-  DATxnType txn_type;
-	uint64_t trans_id;
-	uint64_t item_id;
-	uint64_t seq_id;
-	uint64_t write_version;
-	uint64_t state;
-	uint64_t next_state;
-	uint64_t last_state;
+    DATxnType txn_type;
+    uint64_t trans_id;
+    uint64_t item_id;
+    uint64_t seq_id;
+    uint64_t write_version;
+    uint64_t state;
+    uint64_t next_state;
+    uint64_t last_state;
 };
 
 class QueryMessage : public Message {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init() {}
-  void release() {}
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init() {}
+    void release() {}
 
-  uint64_t pid;
-#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == DTA || CC_ALG == WOOKONG || CC_ALG == DNCC
-  uint64_t ts;
+    uint64_t pid;
+#if CC_ALG == WAIT_DIE || CC_ALG == TIMESTAMP || CC_ALG == MVCC || CC_ALG == DTA || \
+    CC_ALG == WOOKONG || CC_ALG == DNCC
+    uint64_t ts;
 #endif
 #if CC_ALG == TCM
-  uint64_t early;
-  uint64_t late;
-  bool end;
-  bool committed;
+    uint64_t early;
+    uint64_t late;
+    bool end;
+    bool committed;
 #endif
-#if CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA || CC_ALG == DLI_DTA || CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3
-  uint64_t start_ts;
+#if CC_ALG == MVCC || CC_ALG == WOOKONG || CC_ALG == DTA || CC_ALG == DLI_DTA || \
+    CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3
+    uint64_t start_ts;
 #endif
-#if MODE==QRY_ONLY_MODE
-  uint64_t max_access;
+#if MODE == QRY_ONLY_MODE
+    uint64_t max_access;
 #endif
 };
 
 class YCSBQueryMessage : public QueryMessage {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init();
-  void release();
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init();
+    void release();
 
- Array<ycsb_request*> requests;
-
+    Array<ycsb_request*> requests;
 };
 
 class TPCCQueryMessage : public QueryMessage {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init();
-  void release();
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init();
+    void release();
 
-  uint64_t txn_type;
-  uint64_t state;
+    uint64_t txn_type;
+    uint64_t state;
 
-	// common txn input for both payment & new-order
-  uint64_t w_id;
-  uint64_t d_id;
-  uint64_t c_id;
+    // common txn input for both payment & new-order
+    uint64_t w_id;
+    uint64_t d_id;
+    uint64_t c_id;
 
-  // payment
-  uint64_t d_w_id;
-  uint64_t c_w_id;
-  uint64_t c_d_id;
-	char c_last[LASTNAME_LEN];
-  uint64_t h_amount;
-  bool by_last_name;
+    // payment
+    uint64_t d_w_id;
+    uint64_t c_w_id;
+    uint64_t c_d_id;
+    char c_last[LASTNAME_LEN];
+    uint64_t h_amount;
+    bool by_last_name;
 
-  // new order
-  Array<Item_no*> items;
-	bool rbk;
-  bool remote;
-  uint64_t ol_cnt;
-  uint64_t o_entry_d;
-
+    // new order
+    Array<Item_no*> items;
+    bool rbk;
+    bool remote;
+    uint64_t ol_cnt;
+    uint64_t o_entry_d;
 };
 
 class PPSQueryMessage : public QueryMessage {
 public:
-  void copy_from_buf(char * buf);
-  void copy_to_buf(char * buf);
-  void copy_from_txn(TxnManager * txn);
-  void copy_to_txn(TxnManager * txn);
-  uint64_t get_size();
-  void init();
-  void release();
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init();
+    void release();
 
-  uint64_t txn_type;
-  uint64_t state;
+    uint64_t txn_type;
+    uint64_t state;
 
-  // getparts
-  uint64_t part_key;
-  // getproducts / getpartbyproduct
-  uint64_t product_key;
-  // getsuppliers / getpartbysupplier
-  uint64_t supplier_key;
+    // getparts
+    uint64_t part_key;
+    // getproducts / getpartbyproduct
+    uint64_t product_key;
+    // getsuppliers / getpartbysupplier
+    uint64_t supplier_key;
 
-  // part keys from secondary lookup
-  Array<uint64_t> part_keys;
+    // part keys from secondary lookup
+    Array<uint64_t> part_keys;
 };
 
 class DAQueryMessage : public QueryMessage {
- public:
-  void copy_from_buf(char* buf);
-  void copy_to_buf(char* buf);
-  void copy_from_txn(TxnManager* txn);
-  void copy_to_txn(TxnManager* txn);
-  uint64_t get_size();
-  void init();
-  void release();
+public:
+    void copy_from_buf(char* buf);
+    void copy_to_buf(char* buf);
+    void copy_from_txn(TxnManager* txn);
+    void copy_to_txn(TxnManager* txn);
+    uint64_t get_size();
+    void init();
+    void release();
 
-  DATxnType txn_type;
-	uint64_t trans_id;
-	uint64_t item_id;
-	uint64_t seq_id;
-	uint64_t write_version;
-	uint64_t state;
-	uint64_t next_state;
-	uint64_t last_state;
+    DATxnType txn_type;
+    uint64_t trans_id;
+    uint64_t item_id;
+    uint64_t seq_id;
+    uint64_t write_version;
+    uint64_t state;
+    uint64_t next_state;
+    uint64_t last_state;
 };
 
 #endif

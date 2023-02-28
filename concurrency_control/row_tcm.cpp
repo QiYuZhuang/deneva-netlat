@@ -14,21 +14,21 @@
    limitations under the License.
 */
 
-#include "row.h"
-#include "txn.h"
-#include "table.h"
 #include "row_tcm.h"
-#include "mem_alloc.h"
-#include "manager.h"
+
 #include "helper.h"
+#include "manager.h"
+#include "mem_alloc.h"
+#include "row.h"
+#include "table.h"
+#include "txn.h"
 
 void Row_tcm::init(row_t *row) {
     _row = row;
-    owners_size = 1;//1031;
+    owners_size = 1;  // 1031;
     owners = NULL;
-    owners = (LockEntry**) mem_allocator.alloc(sizeof(LockEntry*)*owners_size);
-    for(uint64_t i = 0; i < owners_size; i++)
-        owners[i] = NULL;
+    owners = (LockEntry **)mem_allocator.alloc(sizeof(LockEntry *) * owners_size);
+    for (uint64_t i = 0; i < owners_size; i++) owners[i] = NULL;
     waiters_head = NULL;
     waiters_tail = NULL;
     owner_cnt = 0;
@@ -43,35 +43,34 @@ void Row_tcm::init(row_t *row) {
     own_starttime = 0;
 }
 
-RC Row_tcm::lock_get(lock_t type, TxnManager * txn) {
-	uint64_t *txnids = NULL;
-	int txncnt = 0;
-	return lock_get(type, txn, txnids, txncnt);
+RC Row_tcm::lock_get(lock_t type, TxnManager *txn) {
+    uint64_t *txnids = NULL;
+    int txncnt = 0;
+    return lock_get(type, txn, txnids, txncnt);
 }
 
-RC Row_tcm::lock_get(lock_t type, TxnManager * txn, uint64_t* &txnids, int &txncnt) {
+RC Row_tcm::lock_get(lock_t type, TxnManager *txn, uint64_t *&txnids, int &txncnt) {
     assert(CC_ALG == TCM);
     // printf("lock_get begin, txn_id: %lu\n", txn->get_txn_id());
     RC rc;
-    bool can_adjust_1 = true; // can_be_before(requestor, holder), requestor is reader
-    bool can_adjust_2 = true; // can_be_before(holder, requestor), requester is reader or writer
+    bool can_adjust_1 = true;  // can_be_before(requestor, holder), requestor is reader
+    bool can_adjust_2 = true;  // can_be_before(holder, requestor), requester is reader or writer
 
     LockEntry *en;
     uint64_t starttime = get_sys_clock();
 
     if (g_central_man) {
         glob_manager.lock_row(_row);
-    }
-    else {
+    } else {
         uint64_t mtx_wait_starttime = get_sys_clock();
-        pthread_mutex_lock( latch );
-        INC_STATS(txn->get_thd_id(),mtx[17],get_sys_clock() - mtx_wait_starttime);
+        pthread_mutex_lock(latch);
+        INC_STATS(txn->get_thd_id(), mtx[17], get_sys_clock() - mtx_wait_starttime);
     }
 
-    if(owner_cnt > 0) {
-        INC_STATS(txn->get_thd_id(),twopl_already_owned_cnt,1);
+    if (owner_cnt > 0) {
+        INC_STATS(txn->get_thd_id(), twopl_already_owned_cnt, 1);
     }
-    
+
     bool conflict = conflict_lock(lock_type, type);
 
     pthread_mutex_lock(txn->ts_interval_lock);
@@ -83,15 +82,17 @@ RC Row_tcm::lock_get(lock_t type, TxnManager * txn, uint64_t* &txnids, int &txnc
     pthread_mutex_unlock(txn->ts_interval_lock);
 
     if (!conflict) {
-        DEBUG("tcm lock (%ld,%ld): owners %d, own type %d, req type %d, key %ld %lx\n",txn->get_txn_id(),txn->get_batch_id(),owner_cnt,lock_type,type,_row->get_primary_key(),(uint64_t)_row);
-        if(owner_cnt > 0) {
+        DEBUG("tcm lock (%ld,%ld): owners %d, own type %d, req type %d, key %ld %lx\n",
+              txn->get_txn_id(), txn->get_batch_id(), owner_cnt, lock_type, type,
+              _row->get_primary_key(), (uint64_t)_row);
+        if (owner_cnt > 0) {
             assert(type == LOCK_SH);
-            INC_STATS(txn->get_thd_id(),twopl_sh_bypass_cnt,1);
+            INC_STATS(txn->get_thd_id(), twopl_sh_bypass_cnt, 1);
         }
 
-        push_lock_stack(txn, type); // grant lock
+        push_lock_stack(txn, type);  // grant lock
 
-        if(lock_type == LOCK_NONE) {
+        if (lock_type == LOCK_NONE) {
             own_starttime = get_sys_clock();
         }
         lock_type = type;
@@ -109,7 +110,7 @@ RC Row_tcm::lock_get(lock_t type, TxnManager * txn, uint64_t* &txnids, int &txnc
             txn->set_tcm_early(max(ts_committed + 1, txn->get_tcm_early()));
         }
     } else {
-        if ((txn->get_tcm_end() && last_committed_write_ts + 1 >= txn->get_tcm_late()) || 
+        if ((txn->get_tcm_end() && last_committed_write_ts + 1 >= txn->get_tcm_late()) ||
             (txn->get_tcm_end() && last_committed_read_ts + 1 >= txn->get_tcm_late())) {
             pthread_mutex_unlock(txn->ts_interval_lock);
             rc = Abort;
@@ -119,7 +120,6 @@ RC Row_tcm::lock_get(lock_t type, TxnManager * txn, uint64_t* &txnids, int &txnc
             txn->set_tcm_early(max(ts_committed + 1, txn->get_tcm_early()));
         }
     }
-    
 
     if (txn->get_tcm_end() && txn->get_tcm_early() >= txn->get_tcm_late()) {
         pthread_mutex_unlock(txn->ts_interval_lock);
@@ -129,34 +129,32 @@ RC Row_tcm::lock_get(lock_t type, TxnManager * txn, uint64_t* &txnids, int &txnc
     pthread_mutex_unlock(txn->ts_interval_lock);
 
     // find conflict, check timestamp interval if need block
-    /* owners can one writer and some readers */ 
-    for(uint64_t i = 0; i < owners_size; i++) {
+    /* owners can one writer and some readers */
+    for (uint64_t i = 0; i < owners_size; i++) {
         en = owners[i];
         while (en != NULL) {
             assert(txn->get_txn_id() != en->txn->get_txn_id());
             // assert(txn->get_timestamp() != en->txn->get_timestamp());
 
-            // if (can_adjust_1 && en->type == LOCK_EX && !can_be_before(txn, en->txn)) // after LOCK_EX 
-            if (can_adjust_1 && !can_be_before(txn, en->txn)) // after LOCK_EX 
+            // if (can_adjust_1 && en->type == LOCK_EX && !can_be_before(txn, en->txn)) // after
+            // LOCK_EX
+            if (can_adjust_1 && !can_be_before(txn, en->txn))  // after LOCK_EX
                 can_adjust_1 = false;
 
-            if (can_adjust_2 && !can_be_before(en->txn, txn)) 
-                can_adjust_2 = false;
-            
-            if (!can_adjust_1 && !can_adjust_2)
-                break;
+            if (can_adjust_2 && !can_be_before(en->txn, txn)) can_adjust_2 = false;
+
+            if (!can_adjust_1 && !can_adjust_2) break;
 
             en = en->next;
         }
 
-        if(!can_adjust_1 && !can_adjust_2)
-            break;
+        if (!can_adjust_1 && !can_adjust_2) break;
     }
 
-    if (type == LOCK_SH) { // requestor is reader
+    if (type == LOCK_SH) {  // requestor is reader
         // always success
         if (can_adjust_1) {
-            for(uint64_t i = 0; i < owners_size; i++) {
+            for (uint64_t i = 0; i < owners_size; i++) {
                 en = owners[i];
                 while (en != NULL) {
                     if (en->type == LOCK_EX) {
@@ -185,10 +183,10 @@ RC Row_tcm::lock_get(lock_t type, TxnManager * txn, uint64_t* &txnids, int &txnc
             goto final;
         }
 
-        // block 
-adjust_2:
+        // block
+    adjust_2:
         if (can_adjust_2) {
-            for(uint64_t i = 0; i < owners_size; i++) {
+            for (uint64_t i = 0; i < owners_size; i++) {
                 en = owners[i];
                 while (en != NULL) {
                     lock_ts_interval(txn, en->txn);
@@ -203,22 +201,22 @@ adjust_2:
                     en = en->next;
                 }
             }
-            rc = add_reader_entry_into_waiters(txn); // WAIT or Abort
+            rc = add_reader_entry_into_waiters(txn);  // WAIT or Abort
             goto final;
         }
-        
+
         rc = Abort;
         goto final;
-    } else if (type == LOCK_EX) { // requestor is writer
+    } else if (type == LOCK_EX) {  // requestor is writer
         /*
          * writer can meet conflicts in 2 situations:
          * 1. block by writer, maybe some readers, find the writer
          * 2. block by readers
-         */ 
+         */
         bool block_by_reader = lock_type == LOCK_SH;
         if (can_adjust_2) {
             if (block_by_reader) {
-                for(uint64_t i = 0; i < owners_size; i++) {
+                for (uint64_t i = 0; i < owners_size; i++) {
                     en = owners[i];
                     while (en != NULL) {
                         lock_ts_interval(txn, en->txn);
@@ -238,7 +236,7 @@ adjust_2:
                 if (waiter_cnt > 0) {
                     en = waiters_head;
                     printf("it is weird");
-                    while(en != nullptr) {
+                    while (en != nullptr) {
                         lock_ts_interval(txn, en->txn);
                         if (can_be_before(txn, en->txn)) {
                             put_before(txn, en->txn, en->type == LOCK_SH);
@@ -256,11 +254,11 @@ adjust_2:
                 //     goto final;
                 // }
                 push_lock_stack(txn, type);
-                lock_type = LOCK_EX; // change lock type
+                lock_type = LOCK_EX;  // change lock type
                 rc = RCOK;
                 goto final;
             } else {
-                for(uint64_t i = 0; i < owners_size; i++) {
+                for (uint64_t i = 0; i < owners_size; i++) {
                     en = owners[i];
                     while (en != NULL) {
                         lock_ts_interval(txn, en->txn);
@@ -296,9 +294,9 @@ final:
     }
     txn->txn_stats.cc_time += timespan;
     txn->txn_stats.cc_time_short += timespan;
-    INC_STATS(txn->get_thd_id(),twopl_getlock_time,timespan);
-    INC_STATS(txn->get_thd_id(),twopl_getlock_cnt,1);
-        
+    INC_STATS(txn->get_thd_id(), twopl_getlock_time, timespan);
+    INC_STATS(txn->get_thd_id(), twopl_getlock_cnt, 1);
+
     if (g_central_man)
         glob_manager.release_row(_row);
     else
@@ -312,19 +310,19 @@ RC Row_tcm::lock_release(TxnManager *txn) {
     assert(txn != nullptr);
     // printf("lock_release begin, txn_id: %lu\n", txn->get_txn_id());
 
-    RC rc = RCOK;	
+    RC rc = RCOK;
     uint64_t starttime = get_sys_clock();
     if (g_central_man)
         glob_manager.lock_row(_row);
     else {
         uint64_t mtx_wait_starttime = get_sys_clock();
-        pthread_mutex_lock( latch );
-        INC_STATS(txn->get_thd_id(),mtx[18],get_sys_clock() - mtx_wait_starttime);
+        pthread_mutex_lock(latch);
+        INC_STATS(txn->get_thd_id(), mtx[18], get_sys_clock() - mtx_wait_starttime);
     }
 
     // Try to find the entry in the owners
-    LockEntry * en = owners[hash(txn->get_txn_id())];
-    LockEntry * prev = NULL;
+    LockEntry *en = owners[hash(txn->get_txn_id())];
+    LockEntry *prev = NULL;
     while (en != NULL && en->txn != txn) {
         prev = en;
         en = en->next;
@@ -341,22 +339,21 @@ RC Row_tcm::lock_release(TxnManager *txn) {
             }
             pthread_mutex_unlock(txn->ts_interval_lock);
         }
-        if (prev) 
+        if (prev)
             prev->next = en->next;
-        else 
+        else
             owners[hash(txn->get_txn_id())] = en->next;
-        owner_cnt --;
+        owner_cnt--;
         if (owner_cnt == 0) {
-            INC_STATS(txn->get_thd_id(),twopl_owned_cnt,1);
+            INC_STATS(txn->get_thd_id(), twopl_owned_cnt, 1);
             uint64_t endtime = get_sys_clock();
-            INC_STATS(txn->get_thd_id(),twopl_owned_time,endtime - own_starttime);
-            if(lock_type == LOCK_SH) {
-                INC_STATS(txn->get_thd_id(),twopl_sh_owned_time,endtime - own_starttime);
-                INC_STATS(txn->get_thd_id(),twopl_sh_owned_cnt,1);
-            }
-            else {
-                INC_STATS(txn->get_thd_id(),twopl_ex_owned_time,endtime - own_starttime);
-                INC_STATS(txn->get_thd_id(),twopl_ex_owned_cnt,1);
+            INC_STATS(txn->get_thd_id(), twopl_owned_time, endtime - own_starttime);
+            if (lock_type == LOCK_SH) {
+                INC_STATS(txn->get_thd_id(), twopl_sh_owned_time, endtime - own_starttime);
+                INC_STATS(txn->get_thd_id(), twopl_sh_owned_cnt, 1);
+            } else {
+                INC_STATS(txn->get_thd_id(), twopl_ex_owned_time, endtime - own_starttime);
+                INC_STATS(txn->get_thd_id(), twopl_ex_owned_cnt, 1);
             }
             lock_type = LOCK_NONE;
         } else {
@@ -369,44 +366,42 @@ RC Row_tcm::lock_release(TxnManager *txn) {
     } else {
         // find from wait list
         en = waiters_head;
-        while (en != NULL && en->txn != txn)
-            en = en->next;
+        while (en != NULL && en->txn != txn) en = en->next;
         assert(en);
 
         LIST_REMOVE(en);
-        if (en == waiters_head)
-            waiters_head = en->next;
-        if (en == waiters_tail)
-            waiters_tail = en->prev;
-        
-        waiter_cnt --;
+        if (en == waiters_head) waiters_head = en->next;
+        if (en == waiters_tail) waiters_tail = en->prev;
+
+        waiter_cnt--;
         return_entry(en);
     }
 
     // grant lock to wait list
     if (lock_type == LOCK_SH || lock_type == LOCK_NONE) {
-        LockEntry * entry;
+        LockEntry *entry;
         while (waiters_head && !conflict_lock(lock_type, waiters_head->type)) {
             LIST_GET_HEAD(waiters_head, waiters_tail, entry);
             uint64_t timespan = get_sys_clock() - entry->txn->twopl_wait_start;
             entry->txn->twopl_wait_start = 0;
 
-            INC_STATS(txn->get_thd_id(),twopl_wait_time,timespan);\
+            INC_STATS(txn->get_thd_id(), twopl_wait_time, timespan);
 
             STACK_PUSH(owners[hash(entry->txn->get_txn_id())], entry);
-            owner_cnt ++;
-            waiter_cnt --;
-            if(entry->txn->get_timestamp() > max_owner_ts) {
+            owner_cnt++;
+            waiter_cnt--;
+            if (entry->txn->get_timestamp() > max_owner_ts) {
                 max_owner_ts = entry->txn->get_timestamp();
             }
 
             ASSERT(entry->txn->lock_ready == false);
-            if(entry->txn->decr_lr() == 0) {
-                if(ATOM_CAS(entry->txn->lock_ready,false,true)) {
-                    txn_table.restart_txn(txn->get_thd_id(),entry->txn->get_txn_id(),entry->txn->get_batch_id());
+            if (entry->txn->decr_lr() == 0) {
+                if (ATOM_CAS(entry->txn->lock_ready, false, true)) {
+                    txn_table.restart_txn(txn->get_thd_id(), entry->txn->get_txn_id(),
+                                          entry->txn->get_batch_id());
                 }
             }
-            if(lock_type == LOCK_NONE) {
+            if (lock_type == LOCK_NONE) {
                 own_starttime = get_sys_clock();
             }
             lock_type = entry->type;
@@ -415,16 +410,17 @@ RC Row_tcm::lock_release(TxnManager *txn) {
         if (waiters_head && waiters_head->type == LOCK_EX && lock_type == LOCK_SH) {
             LIST_GET_HEAD(waiters_head, waiters_tail, entry);
             STACK_PUSH(owners[hash(entry->txn->get_txn_id())], entry);
-            owner_cnt ++;
-            waiter_cnt --;
-            if(entry->txn->get_timestamp() > max_owner_ts) {
+            owner_cnt++;
+            waiter_cnt--;
+            if (entry->txn->get_timestamp() > max_owner_ts) {
                 max_owner_ts = entry->txn->get_timestamp();
             }
 
             ASSERT(entry->txn->lock_ready == false);
-            if(entry->txn->decr_lr() == 0) {
-                if(ATOM_CAS(entry->txn->lock_ready,false,true)) {
-                    txn_table.restart_txn(txn->get_thd_id(),entry->txn->get_txn_id(),entry->txn->get_batch_id());
+            if (entry->txn->decr_lr() == 0) {
+                if (ATOM_CAS(entry->txn->lock_ready, false, true)) {
+                    txn_table.restart_txn(txn->get_thd_id(), entry->txn->get_txn_id(),
+                                          entry->txn->get_batch_id());
                 }
             }
             lock_type = entry->type;
@@ -434,13 +430,13 @@ RC Row_tcm::lock_release(TxnManager *txn) {
     uint64_t timespan = get_sys_clock() - starttime;
     txn->txn_stats.cc_time += timespan;
     txn->txn_stats.cc_time_short += timespan;
-    INC_STATS(txn->get_thd_id(),twopl_release_time,timespan);
-    INC_STATS(txn->get_thd_id(),twopl_release_cnt,1);
+    INC_STATS(txn->get_thd_id(), twopl_release_time, timespan);
+    INC_STATS(txn->get_thd_id(), twopl_release_cnt, 1);
 
     if (g_central_man)
         glob_manager.release_row(_row);
     else
-        pthread_mutex_unlock( latch );
+        pthread_mutex_unlock(latch);
     // printf("lock_release end, txn_id: %lu\n", txn->get_txn_id());
 
     return rc;
@@ -448,16 +444,16 @@ RC Row_tcm::lock_release(TxnManager *txn) {
 
 void Row_tcm::push_lock_stack(TxnManager *txn, lock_t type) {
     // grant lock-sh
-    LockEntry * entry = get_entry();
+    LockEntry *entry = get_entry();
     entry->type = type;
     entry->start_ts = get_sys_clock();
     entry->txn = txn;
     STACK_PUSH(owners[hash(txn->get_txn_id())], entry);
 
-    if(txn->get_timestamp() > max_owner_ts) {
+    if (txn->get_timestamp() > max_owner_ts) {
         max_owner_ts = txn->get_timestamp();
     }
-    owner_cnt ++;
+    owner_cnt++;
 }
 
 void Row_tcm::lock_ts_interval(TxnManager *txn1, TxnManager *txn2) {
@@ -484,12 +480,12 @@ void Row_tcm::unlock_ts_interval(TxnManager *txn1, TxnManager *txn2) {
 
 RC Row_tcm::add_reader_entry_into_waiters(TxnManager *txn) {
     RC rc = WAIT;
-    LockEntry * entry = get_entry();
+    LockEntry *entry = get_entry();
     entry->start_ts = get_sys_clock();
     entry->txn = txn;
     entry->type = LOCK_SH;
-    LockEntry * en;
-    ATOM_CAS(txn->lock_ready,1,0);
+    LockEntry *en;
+    ATOM_CAS(txn->lock_ready, 1, 0);
     txn->incr_lr();
     en = waiters_tail;
     /****************************/
@@ -507,7 +503,7 @@ RC Row_tcm::add_reader_entry_into_waiters(TxnManager *txn) {
         }
         en = en->prev;
     }
-    
+
     if (en) {
         lock_ts_interval(txn, en->txn);
         if (can_be_before(en->txn, txn)) {
@@ -534,19 +530,19 @@ RC Row_tcm::add_reader_entry_into_waiters(TxnManager *txn) {
         pthread_mutex_unlock(txn->ts_interval_lock);
         LIST_PUT_HEAD(waiters_head, waiters_tail, entry);
     }
-    waiter_cnt ++;
+    waiter_cnt++;
     assert(rc == WAIT);
     return rc;
 }
 
 RC Row_tcm::add_writer_entry_into_waiters(TxnManager *txn) {
     RC rc = WAIT;
-    LockEntry * entry = get_entry();
+    LockEntry *entry = get_entry();
     entry->start_ts = get_sys_clock();
     entry->txn = txn;
     entry->type = LOCK_EX;
-    LockEntry * en;
-    ATOM_CAS(txn->lock_ready,1,0);
+    LockEntry *en;
+    ATOM_CAS(txn->lock_ready, 1, 0);
     txn->incr_lr();
     en = waiters_head;
     /****************************/
@@ -570,14 +566,13 @@ RC Row_tcm::add_writer_entry_into_waiters(TxnManager *txn) {
     }
     pthread_mutex_unlock(txn->ts_interval_lock);
     LIST_PUT_TAIL(waiters_head, waiters_tail, entry);
-    waiter_cnt ++;
+    waiter_cnt++;
     assert(rc == WAIT);
     return rc;
 }
 
 bool Row_tcm::can_be_before(TxnManager *former, TxnManager *later) {
-    if (later->get_tcm_early() >= later->get_tcm_late())
-        return false;
+    if (later->get_tcm_early() >= later->get_tcm_late()) return false;
     if (former->get_tcm_end()) {
         if (former->get_tcm_early() >= former->get_tcm_late()) {
             return false;
@@ -589,7 +584,7 @@ bool Row_tcm::can_be_before(TxnManager *former, TxnManager *later) {
     }
     if (later->get_tcm_end() && later->get_tcm_late() <= former->get_tcm_early() + 1)
         return false;
-    else 
+    else
         return true;
 }
 
@@ -600,19 +595,22 @@ void Row_tcm::put_before(TxnManager *former, TxnManager *later, bool later_is_re
         former->set_tcm_late(get_sys_clock());
         if (former->get_tcm_early() > former->get_tcm_late()) {
             // check = true;
-            printf("set late error, txn id: %lu, early: %lu, late: %lu.\n", former->get_txn_id(), former->get_tcm_early(), former->get_tcm_late());
+            printf("set late error, txn id: %lu, early: %lu, late: %lu.\n", former->get_txn_id(),
+                   former->get_tcm_early(), former->get_tcm_late());
             former->set_tcm_late(former->get_tcm_early());
         }
         // assert(former->get_tcm_early() < former->get_tcm_late());
     }
     if (former->get_tcm_early() > former->get_tcm_late()) {
-        printf("BBBB former, txn id: %lu, early: %lu, late: %lu.\n", former->get_txn_id(), former->get_tcm_early(), former->get_tcm_late());
+        printf("BBBB former, txn id: %lu, early: %lu, late: %lu.\n", former->get_txn_id(),
+               former->get_tcm_early(), former->get_tcm_late());
     }
     if (later->get_tcm_early() > later->get_tcm_late()) {
         // check = true;
-        printf("BBBB later, txn id: %lu, early: %lu, late: %lu.\n", later->get_txn_id(), later->get_tcm_early(), later->get_tcm_late());
+        printf("BBBB later, txn id: %lu, early: %lu, late: %lu.\n", later->get_txn_id(),
+               later->get_tcm_early(), later->get_tcm_late());
     }
-    
+
     uint64_t later_early = later->get_tcm_early();
     uint64_t later_late = later->get_tcm_late();
     uint64_t former_early = former->get_tcm_early();
@@ -623,37 +621,54 @@ void Row_tcm::put_before(TxnManager *former, TxnManager *later, bool later_is_re
         former->set_tcm_late(min(former->get_tcm_late(), later->get_tcm_early()));
         former->set_tcm_end(true);
         if (former->get_tcm_early() > former->get_tcm_late()) {
-            printf("LRF former's txn id: %lu. [%lu, %lu]->[%lu, %lu]; later's txn id: %lu. [%lu, %lu]->[%lu, %lu].\n", former->get_txn_id(), former_early, former_late, former->get_tcm_early(), former->get_tcm_late(),
-                    later->get_txn_id(), later_early, later_late, later->get_tcm_early(), later->get_tcm_late());
+            printf(
+                "LRF former's txn id: %lu. [%lu, %lu]->[%lu, %lu]; later's txn id: %lu. [%lu, "
+                "%lu]->[%lu, %lu].\n",
+                former->get_txn_id(), former_early, former_late, former->get_tcm_early(),
+                former->get_tcm_late(), later->get_txn_id(), later_early, later_late,
+                later->get_tcm_early(), later->get_tcm_late());
         }
         if (later->get_tcm_early() > later->get_tcm_late()) {
-            printf("LRL former's txn id: %lu. [%lu, %lu]->[%lu, %lu]; later's txn id: %lu. [%lu, %lu]->[%lu, %lu].\n", former->get_txn_id(), former_early, former_late, former->get_tcm_early(), former->get_tcm_late(),
-                    later->get_txn_id(), later_early, later_late, later->get_tcm_early(), later->get_tcm_late());
+            printf(
+                "LRL former's txn id: %lu. [%lu, %lu]->[%lu, %lu]; later's txn id: %lu. [%lu, "
+                "%lu]->[%lu, %lu].\n",
+                former->get_txn_id(), former_early, former_late, former->get_tcm_early(),
+                former->get_tcm_late(), later->get_txn_id(), later_early, later_late,
+                later->get_tcm_early(), later->get_tcm_late());
         }
-    } else { 
-        /* either former is a reader and get most of time range or former is a writer that currently holds a resource */
+    } else {
+        /* either former is a reader and get most of time range or former is a writer that currently
+         * holds a resource */
         bool flag;
         if (later->get_tcm_end()) {
             flag = true;
             former->set_tcm_late(min(former->get_tcm_late(), later->get_tcm_late() - 1));
             later->set_tcm_early(max(later->get_tcm_early(), former->get_tcm_late()));
-        } 
+        }
         if (former->get_tcm_early() > former->get_tcm_late()) {
-            printf("LWF former's txn id: %lu. flag: %d, [%lu, %lu]->[%lu, %lu]; later's txn id: %lu. [%lu, %lu]->[%lu, %lu].\n", former->get_txn_id(), flag == true, former_early, former_late, former->get_tcm_early(), former->get_tcm_late(),
-                    later->get_txn_id(), later_early, later_late, later->get_tcm_early(), later->get_tcm_late());
+            printf(
+                "LWF former's txn id: %lu. flag: %d, [%lu, %lu]->[%lu, %lu]; later's txn id: %lu. "
+                "[%lu, %lu]->[%lu, %lu].\n",
+                former->get_txn_id(), flag == true, former_early, former_late,
+                former->get_tcm_early(), former->get_tcm_late(), later->get_txn_id(), later_early,
+                later_late, later->get_tcm_early(), later->get_tcm_late());
         }
         if (later->get_tcm_early() > later->get_tcm_late()) {
-            printf("LWL former's txn id: %lu. flag: %d, [%lu, %lu]->[%lu, %lu]; later's txn id: %lu. [%lu, %lu]->[%lu, %lu].\n", former->get_txn_id(), flag == true, former_early, former_late, former->get_tcm_early(), former->get_tcm_late(),
-                    later->get_txn_id(), later_early, later_late, later->get_tcm_early(), later->get_tcm_late());
+            printf(
+                "LWL former's txn id: %lu. flag: %d, [%lu, %lu]->[%lu, %lu]; later's txn id: %lu. "
+                "[%lu, %lu]->[%lu, %lu].\n",
+                former->get_txn_id(), flag == true, former_early, former_late,
+                former->get_tcm_early(), former->get_tcm_late(), later->get_txn_id(), later_early,
+                later_late, later->get_tcm_early(), later->get_tcm_late());
         }
     }
-    
+
     return;
 }
 
 RC Row_tcm::adjust_timestamps_rw(TxnManager *holder, TxnManager *requester) {
     RC rc = RCOK;
-    
+
     return rc;
 }
 
@@ -678,16 +693,15 @@ bool Row_tcm::conflict_lock(lock_t l1, lock_t l2) {
         return false;
 }
 
-LockEntry * Row_tcm::get_entry() {
-    LockEntry * entry = (LockEntry *)
-    mem_allocator.alloc(sizeof(LockEntry));
+LockEntry *Row_tcm::get_entry() {
+    LockEntry *entry = (LockEntry *)mem_allocator.alloc(sizeof(LockEntry));
     entry->type = LOCK_NONE;
     entry->txn = NULL;
-    //DEBUG_M("row_lock::get_entry alloc %lx\n",(uint64_t)entry);
+    // DEBUG_M("row_lock::get_entry alloc %lx\n",(uint64_t)entry);
     return entry;
 }
 
-void Row_tcm::return_entry(LockEntry * entry) {
-    //DEBUG_M("row_lock::return_entry free %lx\n",(uint64_t)entry);
+void Row_tcm::return_entry(LockEntry *entry) {
+    // DEBUG_M("row_lock::return_entry free %lx\n",(uint64_t)entry);
     mem_allocator.free(entry, sizeof(LockEntry));
 }

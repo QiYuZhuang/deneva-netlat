@@ -17,41 +17,43 @@
 #ifndef _MSG_QUEUE_H_
 #define _MSG_QUEUE_H_
 
+#include <boost/lockfree/queue.hpp>
+
+#include "concurrentqueue.h"
 #include "global.h"
 #include "helper.h"
-#include "concurrentqueue.h"
 #include "lock_free_queue.h"
-#include <boost/lockfree/queue.hpp>
 #include "semaphore.h"
 class BaseQuery;
 class Message;
 
 struct msg_entry {
-  Message * msg;
-  uint64_t dest;
-  uint64_t starttime;
+    Message* msg;
+    uint64_t dest;
+    uint64_t starttime;
 };
 
-typedef msg_entry * msg_entry_t;
+typedef msg_entry* msg_entry_t;
 
 class MessageQueue {
 public:
-  void init();
-  void statqueue(uint64_t thd_id, msg_entry * entry);
-  void enqueue(uint64_t thd_id, Message * msg, uint64_t dest);
-  uint64_t dequeue(uint64_t thd_id, Message *& msg);
+    void init();
+    void statqueue(uint64_t thd_id, msg_entry* entry);
+    void enqueue(uint64_t thd_id, Message* msg, uint64_t dest);
+    uint64_t dequeue(uint64_t thd_id, Message*& msg);
+
 private:
- //LockfreeQueue m_queue;
+    // LockfreeQueue m_queue;
 // This is close to max capacity for boost
 #if NETWORK_DELAY_TEST
-  boost::lockfree::queue<msg_entry*> ** cl_m_queue;
+    boost::lockfree::queue<msg_entry*>** cl_m_queue;
 #endif
-  boost::lockfree::queue<msg_entry*> ** m_queue;
-  std::vector<msg_entry*> sthd_m_cache;
-  uint64_t ** ctr;
+    boost::lockfree::queue<msg_entry*>** m_queue;
+    std::vector<msg_entry*> sthd_m_cache;
+    uint64_t** ctr;
 
-  uint64_t msg_queue_size;
-  sem_t 	_semaphore;
+    uint64_t msg_queue_size;
+    sem_t _semaphore;
 };
 
 #endif

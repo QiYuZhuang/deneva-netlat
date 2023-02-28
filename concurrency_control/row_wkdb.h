@@ -22,68 +22,67 @@ class Catalog;
 class TxnManager;
 
 struct WKDBMVReqEntry {
-	TxnManager * txn;
-	ts_t ts;
-	ts_t starttime;
-	WKDBMVReqEntry * next;
+    TxnManager* txn;
+    ts_t ts;
+    ts_t starttime;
+    WKDBMVReqEntry* next;
 };
 
 struct WKDBMVHisEntry {
-	ts_t ts;
-	// only for write history. The value needs to be stored.
-//	char * data;
-	row_t * row;
-	WKDBMVHisEntry * next;
-	WKDBMVHisEntry * prev;
+    ts_t ts;
+    // only for write history. The value needs to be stored.
+    //	char * data;
+    row_t* row;
+    WKDBMVHisEntry* next;
+    WKDBMVHisEntry* prev;
 };
 
 class Row_wkdb {
 public:
-	void init(row_t * row);
-	RC access(TsType type, TxnManager * txn, row_t * row);
-	RC read_and_write(TsType type, TxnManager * txn, row_t * row);
-	//   RC prewrite(TxnManager * txn);
-	RC abort(access_t type, TxnManager * txn);
-	RC commit(access_t type, TxnManager * txn, row_t * data);
-	void write(row_t * data);
+    void init(row_t* row);
+    RC access(TsType type, TxnManager* txn, row_t* row);
+    RC read_and_write(TsType type, TxnManager* txn, row_t* row);
+    //   RC prewrite(TxnManager * txn);
+    RC abort(access_t type, TxnManager* txn);
+    RC commit(access_t type, TxnManager* txn, row_t* data);
+    void write(row_t* data);
 
-	volatile bool wkdb_avail;
+    volatile bool wkdb_avail;
 
 private:
-	row_t * _row;
+    row_t* _row;
 
 public:
-	std::set<uint64_t> * uncommitted_reads;
-	//std::set<uint64_t> * uncommitted_writes;
+    std::set<uint64_t>* uncommitted_reads;
+    // std::set<uint64_t> * uncommitted_writes;
 
-	uint64_t write_trans;
-	uint64_t timestamp_last_read;
-	uint64_t timestamp_last_write;
+    uint64_t write_trans;
+    uint64_t timestamp_last_read;
+    uint64_t timestamp_last_write;
 
-// multi-verison part
+    // multi-verison part
 private:
-	pthread_mutex_t * latch;
-	WKDBMVReqEntry * get_req_entry();
-	void return_req_entry(WKDBMVReqEntry * entry);
-	WKDBMVHisEntry * get_his_entry();
-	void return_his_entry(WKDBMVHisEntry * entry);
+    pthread_mutex_t* latch;
+    WKDBMVReqEntry* get_req_entry();
+    void return_req_entry(WKDBMVReqEntry* entry);
+    WKDBMVHisEntry* get_his_entry();
+    void return_his_entry(WKDBMVHisEntry* entry);
 
-	bool conflict(TsType type, ts_t ts);
-	void buffer_req(TsType type, TxnManager * txn);
-	WKDBMVReqEntry * debuffer_req( TsType type, TxnManager * txn = NULL);
-	void update_buffer(TxnManager * txn);
-	void insert_history( ts_t ts, row_t * row);
+    bool conflict(TsType type, ts_t ts);
+    void buffer_req(TsType type, TxnManager* txn);
+    WKDBMVReqEntry* debuffer_req(TsType type, TxnManager* txn = NULL);
+    void update_buffer(TxnManager* txn);
+    void insert_history(ts_t ts, row_t* row);
 
-	row_t * clear_history(TsType type, ts_t ts);
+    row_t* clear_history(TsType type, ts_t ts);
 
-	WKDBMVReqEntry * readreq_mvcc;
-  	WKDBMVReqEntry * prereq_mvcc;
-  	WKDBMVHisEntry * writehis;
-	WKDBMVHisEntry * writehistail;
-	uint64_t whis_len;
-	uint64_t rreq_len;
-	uint64_t preq_len;
-
+    WKDBMVReqEntry* readreq_mvcc;
+    WKDBMVReqEntry* prereq_mvcc;
+    WKDBMVHisEntry* writehis;
+    WKDBMVHisEntry* writehistail;
+    uint64_t whis_len;
+    uint64_t rreq_len;
+    uint64_t preq_len;
 };
 
 #endif

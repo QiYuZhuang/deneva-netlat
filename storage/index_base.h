@@ -23,35 +23,29 @@ class table_t;
 
 class index_base {
 public:
-  virtual RC init() {
-    return RCOK;
-  };
+    virtual RC init() { return RCOK; };
 
-  virtual RC init(uint64_t size) {
-    return RCOK;
-  };
+    virtual RC init(uint64_t size) { return RCOK; };
 
-	virtual bool 		index_exist(idx_key_t key)=0; // check if the key exist.
+    virtual bool index_exist(idx_key_t key) = 0;  // check if the key exist.
 
-  virtual RC index_insert(idx_key_t key, itemid_t *item, int part_id = -1) = 0;
+    virtual RC index_insert(idx_key_t key, itemid_t *item, int part_id = -1) = 0;
 
-  virtual RC index_insert_nonunique(idx_key_t key, itemid_t *item, int part_id = -1) = 0;
+    virtual RC index_insert_nonunique(idx_key_t key, itemid_t *item, int part_id = -1) = 0;
 
-  virtual RC index_read(idx_key_t key, itemid_t *&item, int part_id = -1) = 0;
+    virtual RC index_read(idx_key_t key, itemid_t *&item, int part_id = -1) = 0;
 
-  virtual RC index_read(idx_key_t key, itemid_t *&item, int part_id = -1, int thd_id = 0) = 0;
+    virtual RC index_read(idx_key_t key, itemid_t *&item, int part_id = -1, int thd_id = 0) = 0;
 
-	// TODO implement index_remove
-  virtual RC index_remove(idx_key_t key) {
-    return RCOK;
-  };
+    // TODO implement index_remove
+    virtual RC index_remove(idx_key_t key) { return RCOK; };
 
-  virtual uint64_t get_count() = 0;
+    virtual uint64_t get_count() = 0;
 
-  virtual void get_index_by_id(uint64_t id, uint64_t count, itemid_t *&item) = 0;
+    virtual void get_index_by_id(uint64_t id, uint64_t count, itemid_t *&item) = 0;
 
-	// the index in on "table". The key is the merged key of "fields"
-	table_t * 			table;
+    // the index in on "table". The key is the merged key of "fields"
+    table_t *table;
 };
 
 #endif

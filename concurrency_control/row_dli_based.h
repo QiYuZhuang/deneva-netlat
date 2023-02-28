@@ -26,31 +26,31 @@ class TxnManager;
 struct TsReqEntry;
 
 class Row_dli_base {
- public:
-  struct Entry {
-    Entry(const ts_t w_ts) : w_ts(w_ts), r_trans_ts() {}
-    ts_t w_ts;
-    std::set<txnid_t> r_trans_ts;
-  };
-  void init(row_t* row);
-  RC access(TxnManager* txn, TsType type, uint64_t& version);
-  void latch();
-  uint64_t write(row_t* data, TxnManager* txn, const access_t type);
-  void release();
-  bool has_version(uint64_t version) const { return version < _rw_transs->size(); }
-  Entry* get_version(uint64_t version) {
-    assert(has_version(version));
-    return &(_rw_transs->at(version));
-  }
+public:
+    struct Entry {
+        Entry(const ts_t w_ts) : w_ts(w_ts), r_trans_ts() {}
+        ts_t w_ts;
+        std::set<txnid_t> r_trans_ts;
+    };
+    void init(row_t* row);
+    RC access(TxnManager* txn, TsType type, uint64_t& version);
+    void latch();
+    uint64_t write(row_t* data, TxnManager* txn, const access_t type);
+    void release();
+    bool has_version(uint64_t version) const { return version < _rw_transs->size(); }
+    Entry* get_version(uint64_t version) {
+        assert(has_version(version));
+        return &(_rw_transs->at(version));
+    }
 
-  std::atomic<uint64_t> w_trans;
+    std::atomic<uint64_t> w_trans;
 
- private:
-  pthread_mutex_t* _latch;
-  sem_t _semaphore;
-  row_t* _row;
-  uint64_t _cur_version;
-  std::vector<Entry>* _rw_transs;
+private:
+    pthread_mutex_t* _latch;
+    sem_t _semaphore;
+    row_t* _row;
+    uint64_t _cur_version;
+    std::vector<Entry>* _rw_transs;
 };
 
 #endif

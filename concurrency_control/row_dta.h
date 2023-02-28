@@ -22,73 +22,73 @@ class Catalog;
 class TxnManager;
 
 struct DTAMVReqEntry {
-  TxnManager* txn;
-  ts_t ts;
-  ts_t starttime;
-  DTAMVReqEntry* next;
+    TxnManager* txn;
+    ts_t ts;
+    ts_t starttime;
+    DTAMVReqEntry* next;
 };
 
 struct DTAMVHisEntry {
-  ts_t ts;
-  // only for write history. The value needs to be stored.
-  //	char * data;
-  row_t* row;
-  uint64_t version;
-  DTAMVHisEntry* next;
-  DTAMVHisEntry* prev;
+    ts_t ts;
+    // only for write history. The value needs to be stored.
+    //	char * data;
+    row_t* row;
+    uint64_t version;
+    DTAMVHisEntry* next;
+    DTAMVHisEntry* prev;
 };
 
 class Row_dta {
- public:
-  void init(row_t* row);
-  RC access(TsType type, TxnManager* txn, row_t* row, uint64_t& version);
-  RC read_and_write(TsType type, TxnManager* txn, row_t* row, uint64_t& version);
-  RC prewrite(TxnManager* txn);
-  RC abort(access_t type, TxnManager* txn);
-  RC commit(access_t type, TxnManager* txn, row_t* data, uint64_t& version);
-  void write(row_t* data);
+public:
+    void init(row_t* row);
+    RC access(TsType type, TxnManager* txn, row_t* row, uint64_t& version);
+    RC read_and_write(TsType type, TxnManager* txn, row_t* row, uint64_t& version);
+    RC prewrite(TxnManager* txn);
+    RC abort(access_t type, TxnManager* txn);
+    RC commit(access_t type, TxnManager* txn, row_t* data, uint64_t& version);
+    void write(row_t* data);
 
- private:
-  volatile bool dta_avail;
-  uint64_t max_version_;
-  row_t* _row;
+private:
+    volatile bool dta_avail;
+    uint64_t max_version_;
+    row_t* _row;
 
- public:
-  std::set<uint64_t>* uncommitted_reads;
-  // std::set<uint64_t> * uncommitted_writes;
+public:
+    std::set<uint64_t>* uncommitted_reads;
+    // std::set<uint64_t> * uncommitted_writes;
 
-  uint64_t write_trans;
-  uint64_t timestamp_last_read;
-  uint64_t timestamp_last_write;
+    uint64_t write_trans;
+    uint64_t timestamp_last_read;
+    uint64_t timestamp_last_write;
 
-  // multi-verison part
- private:
-  pthread_mutex_t* latch;
-  bool blatch;
+    // multi-verison part
+private:
+    pthread_mutex_t* latch;
+    bool blatch;
 
-  DTAMVReqEntry* get_req_entry();
-  void return_req_entry(DTAMVReqEntry* entry);
-  DTAMVHisEntry* get_his_entry();
-  void return_his_entry(DTAMVHisEntry* entry);
+    DTAMVReqEntry* get_req_entry();
+    void return_req_entry(DTAMVReqEntry* entry);
+    DTAMVHisEntry* get_his_entry();
+    void return_his_entry(DTAMVHisEntry* entry);
 
-  bool conflict(TsType type, ts_t ts);
-  void buffer_req(TsType type, TxnManager* txn);
-  DTAMVReqEntry* debuffer_req(TsType type, TxnManager* txn = NULL);
-  void update_buffer(TxnManager* txn);
-  uint64_t insert_history(ts_t ts, row_t* row);
+    bool conflict(TsType type, ts_t ts);
+    void buffer_req(TsType type, TxnManager* txn);
+    DTAMVReqEntry* debuffer_req(TsType type, TxnManager* txn = NULL);
+    void update_buffer(TxnManager* txn);
+    uint64_t insert_history(ts_t ts, row_t* row);
 
-  row_t* clear_history(TsType type, ts_t ts);
+    row_t* clear_history(TsType type, ts_t ts);
 
-  DTAMVReqEntry* readreq_mvcc;
-  DTAMVReqEntry* prereq_mvcc;
-  // DTAMVHisEntry * readhis;
-  DTAMVHisEntry* writehis;
-  // DTAMVHisEntry * readhistail;
-  DTAMVHisEntry* writehistail;
-  uint64_t whis_len;
-  // uint64_t rhis_len;
-  uint64_t rreq_len;
-  uint64_t preq_len;
+    DTAMVReqEntry* readreq_mvcc;
+    DTAMVReqEntry* prereq_mvcc;
+    // DTAMVHisEntry * readhis;
+    DTAMVHisEntry* writehis;
+    // DTAMVHisEntry * readhistail;
+    DTAMVHisEntry* writehistail;
+    uint64_t whis_len;
+    // uint64_t rhis_len;
+    uint64_t rreq_len;
+    uint64_t preq_len;
 };
 
 #endif

@@ -1,12 +1,9 @@
 #pragma once
 
 enum {
-	X,
-	Y,
-	Z,
-	};
-
-enum{
-	ID,
-	VALUE
+    X,
+    Y,
+    Z,
 };
+
+enum { ID, VALUE };

@@ -17,74 +17,71 @@
 #ifndef _SYNTH_BM_H_
 #define _SYNTH_BM_H_
 
-#include "wl.h"
-#include "txn.h"
 #include "global.h"
 #include "helper.h"
+#include "txn.h"
+#include "wl.h"
 
 class YCSBQuery;
 class YCSBQueryMessage;
 class ycsb_request;
 
-enum YCSBRemTxnType {
-  YCSB_0,
-  YCSB_1,
-  YCSB_FIN,
-  YCSB_RDONE
-};
+enum YCSBRemTxnType { YCSB_0, YCSB_1, YCSB_FIN, YCSB_RDONE };
 
 class YCSBWorkload : public Workload {
-public :
-	RC init();
-	RC init_table();
-	RC init_schema(const char * schema_file);
-	RC get_txn_man(TxnManager *& txn_manager);
-	int key_to_part(uint64_t key);
-  INDEX ** get_all_index(int *length);
-	INDEX * the_index;
-	table_t * the_table;
+public:
+    RC init();
+    RC init_table();
+    RC init_schema(const char *schema_file);
+    RC get_txn_man(TxnManager *&txn_manager);
+    int key_to_part(uint64_t key);
+    INDEX **get_all_index(int *length);
+    INDEX *the_index;
+    table_t *the_table;
+
 private:
-	void init_table_parallel();
-	void * init_table_slice();
-	static void * threadInitTable(void * This) {
-		((YCSBWorkload *)This)->init_table_slice();
-		return NULL;
-	}
-	pthread_mutex_t insert_lock;
-	//  For parallel initialization
-	static int next_tid;
+    void init_table_parallel();
+    void *init_table_slice();
+    static void *threadInitTable(void *This) {
+        ((YCSBWorkload *)This)->init_table_slice();
+        return NULL;
+    }
+    pthread_mutex_t insert_lock;
+    //  For parallel initialization
+    static int next_tid;
 };
 
 class YCSBTxnManager : public TxnManager {
 public:
-	void init(uint64_t thd_id, Workload * h_wl);
-	void reset();
-	void partial_reset();
-  RC acquire_locks();
-	RC run_txn();
-  RC run_txn_post_wait();
-	RC run_calvin_txn();
-  void copy_remote_requests(YCSBQueryMessage * msg);
-  bool is_done() override;
+    void init(uint64_t thd_id, Workload *h_wl);
+    void reset();
+    void partial_reset();
+    RC acquire_locks();
+    RC run_txn();
+    RC run_txn_post_wait();
+    RC run_calvin_txn();
+    void copy_remote_requests(YCSBQueryMessage *msg);
+    bool is_done() override;
+
 private:
-  void next_ycsb_state();
-  RC run_txn_state();
-  RC run_ycsb_0(ycsb_request * req,row_t *& row_local);
-  RC run_ycsb_1(access_t acctype, row_t * row_local);
-  RC run_ycsb();
+    void next_ycsb_state();
+    RC run_txn_state();
+    RC run_ycsb_0(ycsb_request *req, row_t *&row_local);
+    RC run_ycsb_1(access_t acctype, row_t *row_local);
+    RC run_ycsb();
 
-  bool is_local_request(uint64_t idx) ;
-  RC send_remote_request() ;
-  RC send_remote_subtxn();
-  void get_num_msgs_statistics();
+    bool is_local_request(uint64_t idx);
+    RC send_remote_request();
+    RC send_remote_subtxn();
+    void get_num_msgs_statistics();
 
-  bool send_to_remote;
-  row_t * row;
-	YCSBWorkload * _wl;
-	YCSBRemTxnType state;
-  uint64_t next_record_id;
-  uint64_t remote_next_node_id;
-  vector<vector<uint64_t>> remote_node{g_node_cnt};
+    bool send_to_remote;
+    row_t *row;
+    YCSBWorkload *_wl;
+    YCSBRemTxnType state;
+    uint64_t next_record_id;
+    uint64_t remote_next_node_id;
+    vector<vector<uint64_t>> remote_node{g_node_cnt};
 };
 
 #endif

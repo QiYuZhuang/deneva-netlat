@@ -15,6 +15,7 @@
 */
 
 #include "client_txn.h"
+
 #include "mem_alloc.h"
 
 void Inflight_entry::init() {
@@ -26,7 +27,7 @@ int32_t Inflight_entry::inc_inflight() {
     int32_t result;
     sem_wait(&mutex);
     if (num_inflight_txns < g_inflight_max) {
-    // if (num_inflight_txns < 1) {
+        // if (num_inflight_txns < 1) {
         result = ++num_inflight_txns;
     } else {
         result = -1;
@@ -38,10 +39,10 @@ int32_t Inflight_entry::inc_inflight() {
 int32_t Inflight_entry::dec_inflight() {
     int32_t result;
     sem_wait(&mutex);
-    if(num_inflight_txns > 0) {
-      result = --num_inflight_txns;
+    if (num_inflight_txns > 0) {
+        result = --num_inflight_txns;
     }
-    //assert(num_inflight_txns >= 0);
+    // assert(num_inflight_txns >= 0);
     sem_post(&mutex);
     return result;
 }
@@ -55,11 +56,11 @@ int32_t Inflight_entry::get_inflight() {
 }
 
 void Client_txn::init() {
-    //inflight_txns = new Inflight_entry * [g_node_cnt];
-    inflight_txns = new Inflight_entry * [g_servers_per_client];
-    //for (uint32_t i = 0; i < g_node_cnt; ++i) {
+    // inflight_txns = new Inflight_entry * [g_node_cnt];
+    inflight_txns = new Inflight_entry *[g_servers_per_client];
+    // for (uint32_t i = 0; i < g_node_cnt; ++i) {
     for (uint32_t i = 0; i < g_servers_per_client; ++i) {
-    inflight_txns[i] = (Inflight_entry *)mem_allocator.alloc(sizeof(Inflight_entry));
+        inflight_txns[i] = (Inflight_entry *)mem_allocator.alloc(sizeof(Inflight_entry));
         inflight_txns[i]->init();
     }
 }

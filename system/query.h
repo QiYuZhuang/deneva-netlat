@@ -17,9 +17,9 @@
 #ifndef _QUERY_H_
 #define _QUERY_H_
 
+#include "array.h"
 #include "global.h"
 #include "helper.h"
-#include "array.h"
 
 class Workload;
 class YCSBQuery;
@@ -35,7 +35,7 @@ public:
     uint64_t waiting_time;
     void clear();
     void release();
-    virtual bool isReconQuery() {return false;}
+    virtual bool isReconQuery() { return false; }
 
     // Prevent unnecessary remote messages
     Array<uint64_t> partitions;
@@ -48,36 +48,36 @@ public:
 class QueryGenerator {
 public:
     virtual ~QueryGenerator() {}
-    virtual BaseQuery * create_query(Workload * h_wl, uint64_t home_partition_id) = 0;
+    virtual BaseQuery *create_query(Workload *h_wl, uint64_t home_partition_id) = 0;
 };
 
 // All the queries for a particular thread.
 class Query_thd {
 public:
-	void init(Workload * h_wl, int thread_id);
-	BaseQuery * get_next_query();
-	int q_idx;
+    void init(Workload *h_wl, int thread_id);
+    BaseQuery *get_next_query();
+    int q_idx;
 #if WORKLOAD == YCSB
-	YCSBQuery * queries;
+    YCSBQuery *queries;
 #elif WORKLOAD == TPCC
-	TPCCQuery * queries;
+    TPCCQuery *queries;
 #elif WORKLOAD == PPS
-	PPSQuery * queries;
+    PPSQuery *queries;
 #elif WORKLOAD == DA
-	DAQuery * queries;
+    DAQuery *queries;
 #endif
-	char pad[CL_SIZE - sizeof(void *) - sizeof(int)];
+    char pad[CL_SIZE - sizeof(void *) - sizeof(int)];
 };
 
 class Query_queue {
 public:
-	void init(Workload * h_wl);
-	void init(int thread_id);
-	BaseQuery * get_next_query(uint64_t thd_id);
+    void init(Workload *h_wl);
+    void init(int thread_id);
+    BaseQuery *get_next_query(uint64_t thd_id);
 
 private:
-	Query_thd ** all_queries;
-	Workload * _wl;
+    Query_thd **all_queries;
+    Workload *_wl;
 };
 
 #endif

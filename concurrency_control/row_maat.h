@@ -19,24 +19,24 @@
 
 class Row_maat {
 public:
-	void init(row_t * row);
-  RC access(access_t type, TxnManager * txn);
-  RC read_and_prewrite(TxnManager * txn);
-  RC read(TxnManager * txn);
-  RC prewrite(TxnManager * txn);
-  RC abort(access_t type, TxnManager * txn);
-  RC commit(access_t type, TxnManager * txn, row_t * data);
-  void write(row_t * data);
+    void init(row_t* row);
+    RC access(access_t type, TxnManager* txn);
+    RC read_and_prewrite(TxnManager* txn);
+    RC read(TxnManager* txn);
+    RC prewrite(TxnManager* txn);
+    RC abort(access_t type, TxnManager* txn);
+    RC commit(access_t type, TxnManager* txn, row_t* data);
+    void write(row_t* data);
 
 private:
-  volatile bool maat_avail;
+    volatile bool maat_avail;
 
-	row_t * _row;
+    row_t* _row;
 
-  std::set<uint64_t> * uncommitted_reads;
-  std::set<uint64_t> * uncommitted_writes;
-  uint64_t timestamp_last_read;
-  uint64_t timestamp_last_write;
+    std::set<uint64_t>* uncommitted_reads;
+    std::set<uint64_t>* uncommitted_writes;
+    uint64_t timestamp_last_read;
+    uint64_t timestamp_last_write;
 };
 
 #endif

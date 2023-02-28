@@ -32,18 +32,18 @@ class tpcc_client_query;
 // queue model might be implemented.
 class Client_query_queue {
 public:
-	void init(Workload * h_wl);
-  bool done();
-	BaseQuery * get_next_query(uint64_t server_id,uint64_t thread_id);
-  void initQueriesParallel(uint64_t thd_id);
-  static void * initQueriesHelper(void * context);
+    void init(Workload* h_wl);
+    bool done();
+    BaseQuery* get_next_query(uint64_t server_id, uint64_t thread_id);
+    void initQueriesParallel(uint64_t thd_id);
+    static void* initQueriesHelper(void* context);
 
 private:
-	Workload * _wl;
-  uint64_t size;
-  std::vector<std::vector<BaseQuery*>> queries;
-  uint64_t ** query_cnt;
-  volatile uint64_t next_tid;
+    Workload* _wl;
+    uint64_t size;
+    std::vector<std::vector<BaseQuery*>> queries;
+    uint64_t** query_cnt;
+    volatile uint64_t next_tid;
 };
 
 #endif

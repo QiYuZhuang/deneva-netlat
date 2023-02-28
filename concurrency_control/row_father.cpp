@@ -16,7 +16,7 @@ RC Row_father::access(TsType type, TxnManager* txn, row_t* row, uint64_t& versio
     ASF} RC Row_father::prewrite(TxnManager* txn){ASF} RC Row_father::abort(access_t type,
                                                                             TxnManager* txn){
     ASF} RC Row_father::commit(access_t type, TxnManager* txn, row_t* data, uint64_t& version) {
-  ASF
+    ASF
 }
 void Row_father::write(row_t* data){ASF}
 
@@ -36,7 +36,7 @@ RC Row_father::access(TxnManager* txn, TsType type, row_t* row){ASF}
 
 // occ
 RC Row_father::access(TxnManager* txn, TsType type) {
-  ASF
+    ASF
 }
 // ts is the start_ts of the validating txn
 bool Row_father::validate(uint64_t ts) { ASF }

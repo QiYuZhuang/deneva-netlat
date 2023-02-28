@@ -14,23 +14,21 @@
    limitations under the License.
 */
 
+#include "abort_thread.h"
+
+#include "abort_queue.h"
 #include "global.h"
 #include "helper.h"
 #include "thread.h"
-#include "abort_thread.h"
-#include "abort_queue.h"
 
 void AbortThread::setup() {}
 
 RC AbortThread::run() {
-  tsetup();
-  printf("Running AbortThread %ld\n",_thd_id);
-	while (!simulation->is_done()) {
-    heartbeat();
-    abort_queue.process(get_thd_id());
-  }
-  return FINISH;
-
+    tsetup();
+    printf("Running AbortThread %ld\n", _thd_id);
+    while (!simulation->is_done()) {
+        heartbeat();
+        abort_queue.process(get_thd_id());
+    }
+    return FINISH;
 }
-
-

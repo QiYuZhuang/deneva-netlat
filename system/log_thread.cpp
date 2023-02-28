@@ -14,22 +14,20 @@
    limitations under the License.
 */
 
+#include "log_thread.h"
+
 #include "global.h"
 #include "helper.h"
-#include "thread.h"
-#include "log_thread.h"
 #include "logger.h"
+#include "thread.h"
 
 void LogThread::setup() {}
 
 RC LogThread::run() {
-  tsetup();
-	while (!simulation->is_done()) {
-    logger.processRecord(get_thd_id());
-    //logger.flushBufferCheck();
-  }
-  return FINISH;
-
+    tsetup();
+    while (!simulation->is_done()) {
+        logger.processRecord(get_thd_id());
+        // logger.flushBufferCheck();
+    }
+    return FINISH;
 }
-
-

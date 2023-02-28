@@ -26,47 +26,47 @@ class WorkerThread : public Thread {
 public:
     RC run();
     void setup();
-    void statqueue(uint64_t thd_id, Message * msg, uint64_t starttime);
-    void process(Message * msg);
-    void fakeprocess(Message * msg);
+    void statqueue(uint64_t thd_id, Message* msg, uint64_t starttime);
+    void process(Message* msg);
+    void fakeprocess(Message* msg);
     void check_if_done(RC rc);
     void release_txn_man();
     void commit();
     void abort();
-    TxnManager * get_transaction_manager(Message * msg);
+    TxnManager* get_transaction_manager(Message* msg);
     void calvin_wrapup();
-    RC process_rfin(Message * msg);
-    RC process_rfwd(Message * msg);
-    RC process_rack_rfin(Message * msg);
-    RC process_rack_prep(Message * msg);
-    RC process_rqry_rsp(Message * msg);
-    RC process_rqry(Message * msg);
-    RC process_rqry_cont(Message * msg);
-    RC process_rinit(Message * msg);
-    RC process_rprepare(Message * msg);
-    RC process_rpass(Message * msg);
-    RC process_rtxn(Message * msg);
-    RC process_calvin_rtxn(Message * msg);
-    RC process_rtxn_cont(Message * msg);
-    RC process_log_msg(Message * msg);
-    RC process_log_msg_rsp(Message * msg);
-    RC process_log_flushed(Message * msg);
+    RC process_rfin(Message* msg);
+    RC process_rfwd(Message* msg);
+    RC process_rack_rfin(Message* msg);
+    RC process_rack_prep(Message* msg);
+    RC process_rqry_rsp(Message* msg);
+    RC process_rqry(Message* msg);
+    RC process_rqry_cont(Message* msg);
+    RC process_rinit(Message* msg);
+    RC process_rprepare(Message* msg);
+    RC process_rpass(Message* msg);
+    RC process_rtxn(Message* msg);
+    RC process_calvin_rtxn(Message* msg);
+    RC process_rtxn_cont(Message* msg);
+    RC process_log_msg(Message* msg);
+    RC process_log_msg_rsp(Message* msg);
+    RC process_log_flushed(Message* msg);
     RC init_phase();
     uint64_t get_next_txn_id();
     bool is_cc_new_timestamp();
-  bool is_mine(Message* msg);
+    bool is_mine(Message* msg);
+
 private:
     uint64_t _thd_txn_id;
-    ts_t        _curr_ts;
-    ts_t        get_next_ts();
-    TxnManager * txn_man;
+    ts_t _curr_ts;
+    ts_t get_next_ts();
+    TxnManager* txn_man;
 };
 
 class WorkerNumThread : public Thread {
 public:
     RC run();
     void setup();
-
 };
 
 #if CC_ALG == WOOKONG

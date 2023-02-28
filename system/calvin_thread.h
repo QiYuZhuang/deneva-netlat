@@ -24,11 +24,11 @@ class Workload;
 /*
 class CalvinThread : public Thread {
 public:
-	RC 			run();
+    RC 			run();
   void setup();
   uint64_t txn_starttime;
 private:
-	TxnManager * m_txn;
+    TxnManager * m_txn;
 };
 */
 
@@ -36,17 +36,19 @@ class CalvinLockThread : public Thread {
 public:
     RC run();
     void setup();
+
 private:
-    TxnManager * m_txn;
+    TxnManager* m_txn;
 };
 
 class CalvinSequencerThread : public Thread {
 public:
     RC run();
     void setup();
+
 private:
     bool is_batch_ready();
-	uint64_t last_batchtime;
+    uint64_t last_batchtime;
 };
 
 #endif

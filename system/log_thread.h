@@ -23,8 +23,8 @@ class Workload;
 
 class LogThread : public Thread {
 public:
-	RC 			run();
-  void setup();
+    RC run();
+    void setup();
 };
 
 #endif

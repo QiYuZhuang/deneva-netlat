@@ -18,38 +18,39 @@
 #define _GLOBAL_H_
 
 #define __STDC_LIMIT_MACROS
+#include <math.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
+
+#include <cassert>
 #include <cstddef>
 #include <cstdlib>
-#include <cassert>
-#include <stdio.h>
-#include <iostream>
 #include <fstream>
-#include <string.h>
-#include <typeinfo>
+#include <iostream>
 #include <list>
 #include <map>
-#include <set>
 #include <queue>
-#include <string>
-#include <vector>
+#include <set>
 #include <sstream>
-#include <time.h>
-#include <sys/time.h>
-#include <math.h>
+#include <string>
+#include <typeinfo>
+#include <vector>
 
-#include "pthread.h"
 #include "config.h"
+#include "pthread.h"
 #include "stats.h"
 //#include "work_queue.h"
-#include "pool.h"
-#include "txn_table.h"
-#include "logger.h"
-#include "sim_manager.h"
-
 #include <boost/lockfree/queue.hpp>
+
 #include "da_block_queue.h"
+#include "logger.h"
+#include "pool.h"
+#include "sim_manager.h"
+#include "txn_table.h"
 //#include "maat.h"
 
 using namespace std;
@@ -103,14 +104,14 @@ typedef int32_t SInt32;
 typedef uint64_t UInt64;
 typedef int64_t SInt64;
 
-typedef uint64_t ts_t; // time stamp type
+typedef uint64_t ts_t;  // time stamp type
 
 /******************************************/
 // Global Data Structure
 /******************************************/
 extern mem_alloc mem_allocator;
 extern Stats stats;
-extern SimManager * simulation;
+extern SimManager* simulation;
 extern Manager glob_manager;
 extern Query_queue query_queue;
 extern Client_query_queue client_query_queue;
@@ -244,9 +245,9 @@ extern double g_mpitem;
 extern UInt32 g_num_wh;
 extern double g_perc_payment;
 extern bool g_wh_update;
-extern char * output_file;
-extern char * input_file;
-extern char * txn_file;
+extern char* output_file;
+extern char* input_file;
+extern char* txn_file;
 extern UInt32 g_max_items;
 extern UInt32 g_dist_per_wh;
 extern UInt32 g_cust_per_dist;
@@ -293,13 +294,13 @@ extern adaptor wookong_governor;
 extern UInt32 g_adaptor_sleep_time;
 extern std::set<TxnNode> txn_set;
 
-enum RC { RCOK=0, Commit, Abort, WAIT, WAIT_REM, ERROR, FINISH, NONE};
+enum RC { RCOK = 0, Commit, Abort, WAIT, WAIT_REM, ERROR, FINISH, NONE };
 enum RemReqType {
-  INIT_DONE = 0,
+    INIT_DONE = 0,
     RLK,
     RULK,
     CL_QRY,
-    CL_QRY_O,//one server but use the msg queue
+    CL_QRY_O,  // one server but use the msg queue
     RQRY,
     RQRY_CONT,
     RFIN,
@@ -321,17 +322,17 @@ enum RemReqType {
     LOG_MSG_RSP,
     LOG_FLUSHED,
     CALVIN_ACK,
-  NO_MSG
+    NO_MSG
 };
 
 // Calvin
 enum CALVIN_PHASE {
-  CALVIN_RW_ANALYSIS = 0,
-  CALVIN_LOC_RD,
-  CALVIN_SERVE_RD,
-  CALVIN_COLLECT_RD,
-  CALVIN_EXEC_WR,
-  CALVIN_DONE
+    CALVIN_RW_ANALYSIS = 0,
+    CALVIN_LOC_RD,
+    CALVIN_SERVE_RD,
+    CALVIN_COLLECT_RD,
+    CALVIN_EXEC_WR,
+    CALVIN_DONE
 };
 
 /* Thread */
@@ -341,44 +342,40 @@ typedef uint64_t txnid_t;
 typedef uint64_t txn_t;
 
 /* Table and Row */
-typedef uint64_t rid_t; // row id
-typedef uint64_t pgid_t; // page id
-
-
+typedef uint64_t rid_t;   // row id
+typedef uint64_t pgid_t;  // page id
 
 /* INDEX */
-enum latch_t {LATCH_EX, LATCH_SH, LATCH_NONE};
+enum latch_t { LATCH_EX, LATCH_SH, LATCH_NONE };
 // accessing type determines the latch type on nodes
-enum idx_acc_t {INDEX_INSERT, INDEX_READ, INDEX_NONE};
-typedef uint64_t idx_key_t; // key id for index
-typedef uint64_t (*func_ptr)(idx_key_t);	// part_id func_ptr(index_key);
+enum idx_acc_t { INDEX_INSERT, INDEX_READ, INDEX_NONE };
+typedef uint64_t idx_key_t;               // key id for index
+typedef uint64_t (*func_ptr)(idx_key_t);  // part_id func_ptr(index_key);
 
 /* general concurrency control */
-enum access_t {RD, WR, XP, SCAN};
+enum access_t { RD, WR, XP, SCAN };
 /* LOCK */
-enum lock_t {LOCK_EX = 0, LOCK_SH, LOCK_NONE };
+enum lock_t { LOCK_EX = 0, LOCK_SH, LOCK_NONE };
 /* TIMESTAMP */
-enum TsType {R_REQ = 0, W_REQ, P_REQ, XP_REQ};
+enum TsType { R_REQ = 0, W_REQ, P_REQ, XP_REQ };
 
 /*DA query build queue*/
-//queue<DAQuery> query_build_queue;
+// queue<DAQuery> query_build_queue;
 
-
-
-#define GET_THREAD_ID(id)	(id % g_thread_cnt)
-#define GET_NODE_ID(id)	(id % g_node_cnt)
-#define GET_PART_ID(t,n)	(n)
-#define GET_PART_ID_FROM_IDX(idx)	(g_node_id + idx * g_node_cnt)
-#define GET_PART_ID_IDX(p)	(p / g_node_cnt)
+#define GET_THREAD_ID(id) (id % g_thread_cnt)
+#define GET_NODE_ID(id) (id % g_node_cnt)
+#define GET_PART_ID(t, n) (n)
+#define GET_PART_ID_FROM_IDX(idx) (g_node_id + idx * g_node_cnt)
+#define GET_PART_ID_IDX(p) (p / g_node_cnt)
 #define ISSERVER (g_node_id < g_node_cnt)
 #define ISSERVERN(id) (id < g_node_cnt)
 #define ISCLIENT (g_node_id >= g_node_cnt && g_node_id < g_node_cnt + g_client_node_cnt)
-#define ISREPLICA                                 \
-  (g_node_id >= g_node_cnt + g_client_node_cnt && \
-   g_node_id < g_node_cnt + g_client_node_cnt + g_repl_cnt * g_node_cnt)
-#define ISREPLICAN(id)                     \
-  (id >= g_node_cnt + g_client_node_cnt && \
-   id < g_node_cnt + g_client_node_cnt + g_repl_cnt * g_node_cnt)
+#define ISREPLICA                                   \
+    (g_node_id >= g_node_cnt + g_client_node_cnt && \
+     g_node_id < g_node_cnt + g_client_node_cnt + g_repl_cnt * g_node_cnt)
+#define ISREPLICAN(id)                       \
+    (id >= g_node_cnt + g_client_node_cnt && \
+     id < g_node_cnt + g_client_node_cnt + g_repl_cnt * g_node_cnt)
 #define ISCLIENTN(id) (id >= g_node_cnt && id < g_node_cnt + g_client_node_cnt)
 #define IS_LOCAL(tid) (tid % g_node_cnt == g_node_id || CC_ALG == CALVIN)
 #define IS_REMOTE(tid) (tid % g_node_cnt != g_node_id || CC_ALG == CALVIN)
@@ -391,21 +388,21 @@ enum TsType {R_REQ = 0, W_REQ, P_REQ, XP_REQ};
 */
 
 #define MSG(str, args...) \
-  { printf("[%s : %d] " str, __FILE__, __LINE__, args); }  //	printf(args); }
+    { printf("[%s : %d] " str, __FILE__, __LINE__, args); }  //	printf(args); }
 
 // principal index structure. The workload may decide to use a different
 // index structure for specific purposes. (e.g. non-primary key access should use hash)
 #if (INDEX_STRUCT == IDX_BTREE)
-#define INDEX		index_btree
+#define INDEX index_btree
 #else  // IDX_HASH
-#define INDEX		IndexHash
+#define INDEX IndexHash
 #endif
 
 /************************************************/
 // constants
 /************************************************/
 #ifndef UINT64_MAX
-#define UINT64_MAX 		18446744073709551615UL
-#endif // UINT64_MAX
+#define UINT64_MAX 18446744073709551615UL
+#endif  // UINT64_MAX
 
 #endif

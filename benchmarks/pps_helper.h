@@ -22,19 +22,18 @@
 #include "tpcc_helper.h"
 
 enum {
-  FIELD1=1,
-  FIELD2,
-  FIELD3,
-  FIELD4,
-  FIELD5,
-  FIELD6,
-  FIELD7,
-  FIELD8,
-  FIELD9,
-  FIELD10,
-  PART_AMOUNT,
+    FIELD1 = 1,
+    FIELD2,
+    FIELD3,
+    FIELD4,
+    FIELD5,
+    FIELD6,
+    FIELD7,
+    FIELD8,
+    FIELD9,
+    FIELD10,
+    PART_AMOUNT,
 };
-
 
 uint64_t parts_to_partition(uint64_t part_key);
 uint64_t products_to_partition(uint64_t product_key);
